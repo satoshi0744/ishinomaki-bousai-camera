@@ -1,0 +1,8 @@
+html {
+    overflow: auto !important;
+}
+.gtm_frame,
+.hide_head {
+    display:none;
+    visibility: hidden;
+}

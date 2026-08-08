@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>石巻圏 リアルタイム定点観測ビューア</title>
+  <meta name="description" content="石巻圏（石巻市・東松島市・女川町）の河川・道路定点観測カメラを地図上で一覧確認できるポータルサイト">
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Leaflet.js v1.9.4 -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <!-- スタイルシート -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- ========== ヘッダー ========== -->
+    <header class="header">
+      <div class="header-left">
+        <div>
+          <h1 class="header-title">
+            <i class="fa-solid fa-camera-rotate" style="color: var(--accent); margin-right: 6px;"></i>
+            石巻圏 リアルタイム定点観測ビューア
+          </h1>
+          <div class="header-subtitle">石巻市・東松島市・女川町 （更新間隔: 約10分）</div>
+        </div>
+        <!-- 地図折りたたみトグルボタン -->
+        <button class="map-toggle-btn" id="map-toggle-btn" title="地図の表示・折りたたみ切り替え">
+          <i class="fa-solid fa-map-location-dot" id="map-toggle-icon"></i>
+          <span id="map-toggle-text">地図を隠す</span>
+        </button>
+      </div>
+      <div class="header-right">
+        <!-- 種別フィルター -->
+        <div class="filter-group">
+          <button class="filter-btn active" data-category="river">
+            <span class="filter-dot" style="background: var(--river);"></span>
+            河川カメラ
+          </button>
+          <button class="filter-btn active" data-category="road">
+            <span class="filter-dot" style="background: var(--road);"></span>
+            道路カメラ
+          </button>
+          <button class="filter-btn active" data-category="water_level">
+            <span class="filter-dot" style="background: #38bdf8; border-radius: 50%;"></span>
+            水位観測所(◯)
+          </button>
+        </div>
+        <!-- 管理者フィルター -->
+        <div class="operator-filter-group">
+          <button class="operator-btn active" data-operator="all">すべて</button>
+          <button class="operator-btn" data-operator="mlit">国交省</button>
+          <button class="operator-btn" data-operator="miyagi">宮城県</button>
+        </div>
+        <!-- カウントダウンタイマー -->
+        <div class="timer-container">
+          <div class="timer-display">
+            <i class="fa-solid fa-rotate spin-on-refresh"></i>
+            <span id="timer-text">次回更新: 10:00</span>
+          </div>
+          <div class="timer-progress-bg">
+            <div class="timer-progress" id="timer-progress"></div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ========== ステータスバー ========== -->
+    <div class="status-bar">
+      <span class="camera-count">全 45 台</span>
+      <span class="last-update">最終更新: --:--:--</span>
+    </div>
+
+    <!-- ========== メインコンテンツ ========== -->
+    <div class="main-content" id="main-content">
+
+      <!-- 地図エリア -->
+      <div class="map-wrapper" id="map-wrapper">
+        <div id="map"></div>
+        <button class="sidebar-toggle" id="sidebar-toggle" title="カメラリストの開閉">
+          <i class="fa-solid fa-chevron-right" id="toggle-icon"></i>
+        </button>
+      </div>
+
+      <!-- サイドバー：カメラプレビューパネル（蛇腹アコーディオン構造） -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-title">
+            <i class="fa-solid fa-layer-group" style="color: var(--accent);"></i> 水系・地域別リスト
+          </span>
+          <span class="sidebar-count" id="sidebar-count">0 台表示</span>
+        </div>
+        <div class="sidebar-search">
+          <div class="search-input-wrapper">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="search-input" placeholder="カメラ名・場所で検索...">
+          </div>
+        </div>
+        <div class="camera-list" id="camera-list">
+          <!-- JavaScript で動的にアコーディオン生成 -->
+        </div>
+        <div class="no-results" id="no-results">
+          <i class="fa-solid fa-magnifying-glass" style="font-size: 32px; opacity: 0.4; margin-bottom: 8px;"></i>
+          <p>該当するカメラが見つかりません</p>
+        </div>
+      </aside>
+
+    </div><!-- /.main-content -->
+
+    <!-- ========== フッター（参考事務所名） ========== -->
+    <footer class="app-footer">
+      <div class="footer-sources">
+        <i class="fa-solid fa-building-columns"></i> 参考・情報提供元：
+        <span>国土交通省 北上川下流河川事務所</span> | 
+        <span>国土交通省 仙台河川国道事務所</span> | 
+        <span>宮城県</span>
+      </div>
+    </footer>
+
+  </div><!-- /.app-container -->
+
+  <!-- ========== モーダルウィンドウ ========== -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modal-title">カメラ名</h2>
+        <button class="modal-close" id="modal-close" aria-label="閉じる">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-image" id="modal-image">
+          <!-- 画像またはプレースホルダー -->
+        </div>
+        <div class="modal-details" id="modal-details">
+          <!-- 詳細情報 -->
+        </div>
+        <div class="modal-actions" id="modal-actions">
+          <!-- 配信元リンクボタン -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== JavaScript ========== -->
+  <script>
+    window.addEventListener('error', function(e) {
+      document.body.innerHTML += '<div style="position:fixed;top:0;left:0;width:100%;background:red;color:white;z-index:9999;padding:10px;">エラー発生: ' + e.message + '<br>Line: ' + e.lineno + '</div>';
+    });
+  </script>
+  <!-- カメラ・水位観測所データ -->
+  <script src="js/cameras.js?v=20260804_urls_audited"></script>
+  <script src="js/water_level_stations.js?v=20260804_v1"></script>
+  <!-- メインアプリケーション -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="js/app.js?v=20260804_ishinomaki_water_level"></script>
+
+</body>
+</html>
