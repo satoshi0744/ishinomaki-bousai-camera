@@ -112,6 +112,7 @@
     initMarkers();
     initSidebarAccordion();
     initMapToggle();
+    initBottomTabs();
     initFilters();
     initSearch();
     initModal();
@@ -232,6 +233,39 @@
           if (state.map) state.map.invalidateSize();
         }, 350);
       }
+    });
+  }
+
+  // ■ ボトムタブの初期化（スマホ用）
+  function initBottomTabs() {
+    const tabs = document.querySelectorAll('.tab-btn');
+    const mainContent = document.getElementById('main-content');
+    
+    if (tabs.length === 0 || !mainContent) return;
+    
+    // 初期状態設定（スマホ時用クラス）
+    mainContent.classList.add('show-map');
+    mainContent.classList.remove('show-list');
+    
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        // アクティブ状態の切り替え
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        const target = tab.getAttribute('data-tab');
+        if (target === 'map') {
+          mainContent.classList.add('show-map');
+          mainContent.classList.remove('show-list');
+          // 地図のサイズ再計算
+          setTimeout(() => {
+            if (state.map) state.map.invalidateSize();
+          }, 300);
+        } else if (target === 'list') {
+          mainContent.classList.add('show-list');
+          mainContent.classList.remove('show-map');
+        }
+      });
     });
   }
 
