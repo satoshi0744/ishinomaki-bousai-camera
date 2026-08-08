@@ -1131,3 +1131,82 @@ body {
     padding-bottom: 2px;
   }
 }
+
+/* ==========================================================================
+   第3版改修：タイトル、エリア選択、スマホUI最適化
+   ========================================================================== */
+
+/* エリア選択ボタン */
+.area-select-btn {
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  margin-right: 8px;
+}
+.area-select-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* エリア選択モーダル */
+.area-modal-content {
+  max-width: 400px;
+}
+.area-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.area-option-btn {
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+}
+.area-option-btn:hover {
+  background: var(--bg-card-hover);
+}
+.area-option-btn.active {
+  background: var(--accent);
+  color: #000;
+  border-color: var(--accent);
+}
+
+/* タイトルの表示切替（デフォルトはPC） */
+.title-sp { display: none; }
+.title-pc { display: inline; }
+
+/* ==========================================================================
+   スマホ用表示のオーバーライド（第3版改修）
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* スマホ時は短いタイトルにする */
+  .title-pc { display: none; }
+  .title-sp { display: inline; font-size: 15px; }
+
+  /* フィルターボタンの文字を消す（アイコンのみ） */
+  .filter-text { display: none; }
+  .filter-btn { padding: 5px 8px; }
+  
+  /* スマホの初期表示は「地図のみ」にするためサイドバーを強制非表示 */
+  .sidebar {
+    display: none !important; 
+  }
+  /* ただし、タブで「リスト(show-list)」が選ばれた時は表示する */
+  .main-content.show-list .sidebar {
+    display: flex !important;
+  }
+}

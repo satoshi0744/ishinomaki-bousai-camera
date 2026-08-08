@@ -93,6 +93,7 @@
     markers: {},
     activeCategoryFilters: new Set(['river', 'road', 'coast', 'city', 'other']),
     activeOperatorFilter: 'all',
+    activeAreaFilter: localStorage.getItem('ishinomaki_area_filter') || 'ishinomaki', // ★初期値を「石巻圏」に設定（軽量化）
     favorites: new Set(),
     searchQuery: '',
     accordionStates: {},
@@ -113,6 +114,7 @@
     initSidebarAccordion();
     initMapToggle();
     initBottomTabs();
+    initAreaFilter();
     initFilters();
     initSearch();
     initModal();
@@ -232,6 +234,102 @@
         setTimeout(() => {
           if (state.map) state.map.invalidateSize();
         }, 350);
+      }
+    });
+  }
+
+  // ■ エリア（管内）判定ロジック
+  function getAreaForCamera(camera) {
+    const name = camera.name || '';
+    const group = getGroupForCamera(camera);
+    
+    if (group.id === 'group_kyu_kitakami' || group.id === 'group_kitakami' || group.id === 'group_naruse' || name.includes('石巻') || name.includes('東松島') || name.includes('女川') || name.includes('牡鹿')) return 'ishinomaki';
+    if (group.id === 'group_tome_kurihara' || name.includes('登米') || name.includes('栗原')) return 'tome';
+    if (group.id === 'group_osaki_kami' || name.includes('大崎') || name.includes('加美') || name.includes('色麻') || name.includes('美里') || name.includes('涌谷')) return 'osaki';
+    if (group.id === 'group_sendai' || name.includes('仙台') || name.includes('名取') || name.includes('塩竈') || name.includes('松島') || name.includes('岩沼')) return 'sendai';
+    if (group.id === 'group_kesennuma' || name.includes('気仙沼') || name.includes('南三陸') || name.includes('本吉')) return 'kesennuma';
+    
+    return 'all'; // その他（岩手など）はallで表示
+  }
+
+  // ■ エリアフィルターの初期化
+  function initAreaFilter() {
+    const btn = document.getElementById('area-select-btn');
+    const modal = document.getElementById('area-modal-overlay');
+    const closeBtn = document.getElementById('area-modal-close');
+    const options = document.querySelectorAll('.area-option-btn');
+    const currentText = document.getElementById('current-area-text');
+    
+    if (!btn || !modal) return;
+    
+    // 初期テキストの設定
+    const initialOption = Array.from(options).find(opt => opt.getAttribute('data-area') === state.activeAreaFilter);
+    if (initialOption && currentText) {
+      currentText.textContent = initialOption.textContent.split('（')[0]; // カッコ以降を省略
+      options.forEach(o => o.classList.remove('active'));
+      initialOption.classList.add('active');
+    }
+
+    btn.addEventListener('click', () => {
+      modal.classList.add('show');
+    });
+    
+    closeBtn.addEventListener('click', () => {
+      modal.classList.remove('show');
+    });
+    
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.classList.remove('show');
+    });
+
+    options.forEach(opt => {
+      opt.addEventListener('click', () => {
+        const area = opt.getAttribute('data-area');
+        state.activeAreaFilter = area;
+        localStorage.setItem('ishinomaki_area_filter', area);
+        
+        options.forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+        if (currentText) currentText.textContent = opt.textContent.split('（')[0];
+        
+        modal.classList.remove('show');
+        applyAllFilters(); // マーカーとリストを再描画
+      });
+    });
+  }
+
+  // ■ すべてのフィルター（カテゴリー、管理者、エリア、検索）を地図マーカーに適用
+  function applyAllFilters() {
+    renderSidebarList(); // サイドバーの更新
+
+    // 地図のマーカーを更新
+    if (!state.map || !CAMERA_DATA) return;
+    
+    CAMERA_DATA.forEach(camera => {
+      const marker = state.markers[camera.id];
+      if (!marker) return;
+
+      const category = camera.category || 'other';
+      const operator = camera.operator || '';
+      const area = getAreaForCamera(camera);
+      
+      const matchesCategory = state.activeCategoryFilters.has(category);
+      let matchesOperator = state.activeOperatorFilter === 'all' || 
+                           (state.activeOperatorFilter === 'mlit' && operator.includes('国土交通省')) || 
+                           (state.activeOperatorFilter === 'miyagi' && operator.includes('宮城県'));
+      const matchesArea = state.activeAreaFilter === 'all' || area === state.activeAreaFilter || area === 'all';
+      
+      const layerGroup = state.layers[category];
+      if (layerGroup) {
+        if (matchesCategory && matchesOperator && matchesArea) {
+          if (!layerGroup.hasLayer(marker)) {
+            layerGroup.addLayer(marker);
+          }
+        } else {
+          if (layerGroup.hasLayer(marker)) {
+            layerGroup.removeLayer(marker);
+          }
+        }
       }
     });
   }
@@ -358,11 +456,15 @@
       });
 
       if (state.layers[category]) {
-        state.layers[category].addLayer(marker);
+        // 初期状態ではフィルターを適用した結果に基づいてレイヤーに追加するか決めるため、ここでは追加しない
+        // applyAllFilters() が後に呼ばれることで正しい状態になる
       }
       
       state.markers[camera.id] = marker;
     });
+
+    // 初期化時にすべてのマーカーにフィルターを適用して地図に配置する
+    setTimeout(applyAllFilters, 100);
 
     document.addEventListener('open-camera-modal', (e) => {
       openModal(e.detail);
@@ -465,6 +567,8 @@
     CAMERA_DATA.forEach(camera => {
       const category = camera.category || 'other';
       const operator = camera.operator || '';
+      const area = getAreaForCamera(camera);
+
       const matchesCategory = state.activeCategoryFilters.has(category);
       let matchesOperator = true;
       if (state.activeOperatorFilter === 'mlit') {
@@ -472,6 +576,8 @@
       } else if (state.activeOperatorFilter === 'miyagi') {
         matchesOperator = operator.includes('宮城県');
       }
+      
+      const matchesArea = state.activeAreaFilter === 'all' || area === state.activeAreaFilter || area === 'all';
 
       const q = state.searchQuery.toLowerCase();
       const matchesSearch = q === '' ||
@@ -479,7 +585,7 @@
         (camera.description && camera.description.toLowerCase().includes(q)) ||
         operator.toLowerCase().includes(q);
 
-      if (!matchesCategory || !matchesOperator || !matchesSearch) {
+      if (!matchesCategory || !matchesOperator || !matchesArea || !matchesSearch) {
         return;
       }
 

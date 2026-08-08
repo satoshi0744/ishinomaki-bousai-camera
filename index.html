@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>石巻圏 リアルタイム定点観測ビューア</title>
+<!-- 【データ出典・参考・情報提供元】
+     国土交通省 北上川下流河川事務所 / 国土交通省 仙台河川国道事務所 / 宮城県 
+     （UI最適化のためフッターからコード内に移動） -->
+  <title>宮城県 防災カメラ・水位観測所ポータル</title>
   <meta name="description" content="石巻圏（石巻市・東松島市・女川町）の河川・道路定点観測カメラを地図上で一覧確認できるポータルサイト">
 
   <!-- Google Fonts: Inter -->
@@ -29,7 +32,8 @@
         <div>
           <h1 class="header-title">
             <i class="fa-solid fa-camera-rotate" style="color: var(--accent); margin-right: 6px;"></i>
-            石巻圏 リアルタイム定点観測ビューア
+            <span class="title-pc">宮城県 防災カメラ・水位観測所ポータル</span>
+            <span class="title-sp">宮城防災・水位ポータル</span>
           </h1>
           <div class="header-subtitle">石巻市・東松島市・女川町 （更新間隔: 約10分）</div>
         </div>
@@ -42,19 +46,24 @@
       <div class="header-right">
         <!-- 種別フィルター -->
         <div class="filter-group">
-          <button class="filter-btn active" data-category="river">
+          <button class="filter-btn active" data-category="river" title="河川カメラ">
             <span class="filter-dot" style="background: var(--river);"></span>
-            河川カメラ
+            <span class="filter-text">河川</span>
           </button>
-          <button class="filter-btn active" data-category="road">
+          <button class="filter-btn active" data-category="road" title="道路カメラ">
             <span class="filter-dot" style="background: var(--road);"></span>
-            道路カメラ
+            <span class="filter-text">道路</span>
           </button>
-          <button class="filter-btn active" data-category="water_level">
+          <button class="filter-btn active" data-category="water_level" title="水位観測所">
             <span class="filter-dot" style="background: #38bdf8; border-radius: 50%;"></span>
-            水位観測所(◯)
+            <span class="filter-text">水位(◯)</span>
           </button>
         </div>
+        <!-- エリア選択ボタン -->
+        <button id="area-select-btn" class="area-select-btn">
+          <i class="fa-solid fa-map-location-dot"></i>
+          <span id="current-area-text">全県域</span>
+        </button>
         <!-- 管理者フィルター -->
         <div class="operator-filter-group">
           <button class="operator-btn active" data-operator="all">すべて</button>
@@ -115,17 +124,6 @@
       </aside>
 
     </div><!-- /.main-content -->
-
-    <!-- ========== フッター（参考事務所名） ========== -->
-    <footer class="app-footer">
-      <div class="footer-sources">
-        <i class="fa-solid fa-building-columns"></i> 参考・情報提供元：
-        <span>国土交通省 北上川下流河川事務所</span> | 
-        <span>国土交通省 仙台河川国道事務所</span> | 
-        <span>宮城県</span>
-      </div>
-    </footer>
-
   </div><!-- /.app-container -->
 
   <!-- ========== スマホ用ボトムタブバー ========== -->
@@ -158,6 +156,29 @@
         </div>
         <div class="modal-actions" id="modal-actions">
           <!-- 配信元リンクボタン -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== エリア選択モーダル ========== -->
+  <div class="modal-overlay" id="area-modal-overlay">
+    <div class="modal-content area-modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title"><i class="fa-solid fa-map-location-dot"></i> 管内（エリア）選択</h2>
+        <button class="modal-close" id="area-modal-close" aria-label="閉じる">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body area-modal-body">
+        <p style="margin-bottom: 12px; font-size: 12px; color: var(--text-secondary);">監視したいエリアを選択してください。処理が軽くなります。</p>
+        <div class="area-options">
+          <button class="area-option-btn active" data-area="all">全県域（すべて表示）</button>
+          <button class="area-option-btn" data-area="ishinomaki">石巻圏（石巻・東松島・女川）</button>
+          <button class="area-option-btn" data-area="tome">登米・栗原圏</button>
+          <button class="area-option-btn" data-area="osaki">大崎・加美圏</button>
+          <button class="area-option-btn" data-area="sendai">仙台・仙塩・県南圏</button>
+          <button class="area-option-btn" data-area="kesennuma">気仙沼・南三陸圏</button>
         </div>
       </div>
     </div>
