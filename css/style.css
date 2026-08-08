@@ -1210,3 +1210,22 @@ body {
     display: flex !important;
   }
 }
+
+/* ==========================================================================
+   第4版改修：使い方・凡例ボタン
+   ========================================================================== */
+.info-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.info-btn:hover {
+  color: var(--text-primary);
+}

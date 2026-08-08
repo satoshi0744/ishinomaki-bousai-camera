@@ -118,6 +118,7 @@
     initFilters();
     initSearch();
     initModal();
+    initInfoModal();
     startAutoRefresh();
     updateStatusBar();
   }

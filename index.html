@@ -35,7 +35,6 @@
             <span class="title-pc">宮城県 防災カメラ・水位観測所ポータル</span>
             <span class="title-sp">宮城防災・水位ポータル</span>
           </h1>
-          <div class="header-subtitle">石巻市・東松島市・女川町 （更新間隔: 約10分）</div>
         </div>
         <!-- 地図折りたたみトグルボタン -->
         <button class="map-toggle-btn" id="map-toggle-btn" title="地図の表示・折りたたみ切り替え">
@@ -44,32 +43,15 @@
         </button>
       </div>
       <div class="header-right">
-        <!-- 種別フィルター -->
-        <div class="filter-group">
-          <button class="filter-btn active" data-category="river" title="河川カメラ">
-            <span class="filter-dot" style="background: var(--river);"></span>
-            <span class="filter-text">河川</span>
-          </button>
-          <button class="filter-btn active" data-category="road" title="道路カメラ">
-            <span class="filter-dot" style="background: var(--road);"></span>
-            <span class="filter-text">道路</span>
-          </button>
-          <button class="filter-btn active" data-category="water_level" title="水位観測所">
-            <span class="filter-dot" style="background: #38bdf8; border-radius: 50%;"></span>
-            <span class="filter-text">水位(◯)</span>
-          </button>
-        </div>
+        <!-- 使い方・凡例ボタン -->
+        <button id="info-btn" class="info-btn" title="使い方・凡例">
+          <i class="fa-solid fa-circle-info"></i>
+        </button>
         <!-- エリア選択ボタン -->
         <button id="area-select-btn" class="area-select-btn">
           <i class="fa-solid fa-map-location-dot"></i>
           <span id="current-area-text">全県域</span>
         </button>
-        <!-- 管理者フィルター -->
-        <div class="operator-filter-group">
-          <button class="operator-btn active" data-operator="all">すべて</button>
-          <button class="operator-btn" data-operator="mlit">国交省</button>
-          <button class="operator-btn" data-operator="miyagi">宮城県</button>
-        </div>
         <!-- カウントダウンタイマー -->
         <div class="timer-container">
           <div class="timer-display">
@@ -180,6 +162,31 @@
           <button class="area-option-btn" data-area="sendai">仙台・仙塩・県南圏</button>
           <button class="area-option-btn" data-area="kesennuma">気仙沼・南三陸圏</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 使い方・凡例モーダル ========== -->
+  <div class="modal-overlay" id="info-modal-overlay">
+    <div class="modal-content area-modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h2 class="modal-title"><i class="fa-solid fa-circle-info"></i> 凡例・使い方</h2>
+        <button class="modal-close" id="info-modal-close" aria-label="閉じる">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body area-modal-body" style="font-size: 13px; line-height: 1.6;">
+        <h3 style="margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px;">■ アイコンの凡例</h3>
+        <ul style="list-style: none; padding-left: 0; margin-bottom: 16px;">
+          <li style="margin-bottom: 4px;"><span class="filter-dot" style="background: var(--river); display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:6px;"></span>河川カメラ</li>
+          <li style="margin-bottom: 4px;"><span class="filter-dot" style="background: var(--road); display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:6px;"></span>道路カメラ</li>
+          <li style="margin-bottom: 4px;"><span class="filter-dot" style="background: #38bdf8; display:inline-block; width:12px; height:12px; border-radius:50%; border:2px solid #fff; margin-right:6px;"></span>水位観測所</li>
+          <li style="margin-bottom: 4px;"><span class="filter-dot" style="background: #9ca3af; display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:6px;"></span>調整中・休止中</li>
+        </ul>
+        <h3 style="margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px;">■ 使い方</h3>
+        <p style="margin-bottom: 8px;">・地図上のピンをクリックすると、カメラの最新画像が表示されます。</p>
+        <p style="margin-bottom: 8px;">・画面上部の「エリア選択」から監視したい管内を選ぶと、対象のカメラだけが表示され、動作が軽くなります。</p>
+        <p>・スマホの場合は、下の「カメラ一覧」タブからリスト形式でも確認できます。</p>
       </div>
     </div>
   </div>
