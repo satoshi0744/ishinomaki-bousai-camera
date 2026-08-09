@@ -463,32 +463,12 @@
           </button>
         </div>
       `;
-      const popup = L.popup({
-        closeButton: true,
-        autoPan: false, // 地図が勝手に動くのを防ぐ
-        className: 'custom-smart-popup'
-      }).setContent(popupContent);
-      marker.bindPopup(popup);
-
-      // ポップアップを開く際、画面の余白に応じて位置（オフセット）を自動調整する関数
-      const openSmartPopup = () => {
-        if (!state.map) return;
-        const pt = state.map.latLngToContainerPoint(marker.getLatLng());
-        const mapSize = state.map.getSize();
-        
-        let offsetX = 0;
-        let offsetY = -10; // デフォルトは上方向
-
-        // 上部に余白がない（約280px以下）場合は下方向に表示
-        if (pt.y < 280) offsetY = 35;
-        // 左に余白がない場合は右にずらす
-        if (pt.x < 150) offsetX = 100;
-        // 右に余白がない場合は左にずらす
-        if (pt.x > mapSize.x - 150) offsetX = -100;
-        
-        popup.options.offset = [offsetX, offsetY];
-        marker.openPopup();
-      };
+      marker.bindTooltip(popupContent, {
+        direction: 'auto',
+        interactive: true,
+        className: 'custom-smart-tooltip',
+        offset: [0, 0]
+      });
 
       // サイドバーのスクロール連動関数
       const syncSidebarScroll = () => {
@@ -499,8 +479,16 @@
           groupEl.classList.add('open');
         }
         const card = document.querySelector(`.camera-card[data-camera-id="${camera.id}"]`);
-        if (card) {
-          card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const sidebar = document.getElementById('sidebar');
+        if (card && sidebar) {
+          // 画面全体がスクロールしないよう、サイドバー内部のスクロール位置のみを計算して移動
+          const sidebarRect = sidebar.getBoundingClientRect();
+          const cardRect = card.getBoundingClientRect();
+          sidebar.scrollBy({
+            top: cardRect.top - sidebarRect.top - 50, // 50pxの余白
+            behavior: 'smooth'
+          });
+          
           card.classList.add('card-highlight');
           setTimeout(() => card.classList.remove('card-highlight'), 2000);
         }
@@ -508,13 +496,13 @@
 
       // スマホ対応：タップ時にスマートポップアップを開く
       marker.on('click', () => {
-        openSmartPopup();
+        marker.openTooltip();
         syncSidebarScroll();
       });
 
       // マーカーにマウスを乗せた時（PC用）
       marker.on('mouseover', () => {
-        openSmartPopup();
+        marker.openTooltip();
         syncSidebarScroll();
       });
 
@@ -1042,16 +1030,21 @@
           <div class="hover-popup-hint" style="color: #10b981;"><i class="fa-solid fa-chart-line"></i> クリックで断面図・リアルタイム水位・予測を表示</div>
         </div>
       `;
-      marker.bindPopup(popupContent, { closeButton: false, offset: [0, -10] });
-
-      // ピンホバー時：小画像ポップアップを開く
-      marker.on('mouseover', () => {
-        marker.openPopup();
+      marker.bindTooltip(popupContent, {
+        direction: 'auto',
+        interactive: true,
+        className: 'custom-smart-tooltip',
+        offset: [0, 0]
       });
 
-      // ピン離脱時：小ポップアップを閉じる
-      marker.on('mouseout', () => {
-        marker.closePopup();
+      // スマホ対応：タップで開く
+      marker.on('click', () => {
+        marker.openTooltip();
+      });
+
+      // ホバーで開く
+      marker.on('mouseover', () => {
+        marker.openTooltip();
       });
 
       // ピン直接クリック時：添付画像の画面がそのままモーダル内に開く（方法1：リアルタイム画面埋め込み）
