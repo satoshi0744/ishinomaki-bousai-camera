@@ -300,27 +300,25 @@
         options.forEach(o => o.classList.remove('active'));
         opt.classList.add('active');
         if (currentText) currentText.textContent = opt.textContent.split('（')[0];
-        
-        modal.classList.remove('active');
-        applyAllFilters(); // マーカーとリストを再描画
-
-        // エリアに応じて地図の中心を合同庁舎へ移動
-        if (state.map) {
-          const areaCoords = {
-            'sennan': [38.0495, 140.7307],
-            'sendai': [38.2784, 140.8673],
-            'osaki': [38.5665, 140.9745],
-            'kurihara': [38.7381, 141.0194],
-            'tome': [38.6578, 141.2764],
-            'ishinomaki': [38.4407, 141.2573],
-            'kesennuma': [38.8881, 141.5698]
-          };
-          if (areaCoords[area]) {
-            state.map.flyTo(areaCoords[area], 10, { duration: 1.5 });
-          } else if (area === 'all') {
-            state.map.flyTo(CONFIG.MAP_CENTER, CONFIG.MAP_ZOOM, { duration: 1.5 });
+        // エリアに応じて地図の中心を合同庁舎へ移動（アニメーションの中断を防ぐため少し遅延させる）
+        setTimeout(() => {
+          if (state.map) {
+            const areaCoords = {
+              'sennan': [38.0495, 140.7307],
+              'sendai': [38.2784, 140.8673],
+              'osaki': [38.5665, 140.9745],
+              'kurihara': [38.7381, 141.0194],
+              'tome': [38.6578, 141.2764],
+              'ishinomaki': [38.4407, 141.2573],
+              'kesennuma': [38.8881, 141.5698]
+            };
+            if (areaCoords[area]) {
+              state.map.flyTo(areaCoords[area], 10, { animate: true, duration: 1.0 });
+            } else if (area === 'all') {
+              state.map.flyTo(CONFIG.MAP_CENTER, CONFIG.MAP_ZOOM, { animate: true, duration: 1.0 });
+            }
           }
-        }
+        }, 150);
       });
     });
   }
@@ -497,6 +495,27 @@
 
     // 初期化時にすべてのマーカーにフィルターを適用して地図に配置する
     setTimeout(applyAllFilters, 100);
+
+    // 各圏域の合同庁舎マーカーを常に地図上に表示
+    const govBuildings = [
+      { name: "仙南圏（大河原合同庁舎）", lat: 38.0495, lng: 140.7307 },
+      { name: "仙台圏（仙台合同庁舎）", lat: 38.2784, lng: 140.8673 },
+      { name: "大崎圏（大崎合同庁舎）", lat: 38.5665, lng: 140.9745 },
+      { name: "栗原圏（栗原合同庁舎）", lat: 38.7381, lng: 141.0194 },
+      { name: "登米圏（登米合同庁舎）", lat: 38.6578, lng: 141.2764 },
+      { name: "石巻圏（石巻合同庁舎）", lat: 38.4407, lng: 141.2573 },
+      { name: "気仙沼圏（気仙沼合同庁舎）", lat: 38.8881, lng: 141.5698 }
+    ];
+    govBuildings.forEach((b) => {
+      const govIcon = L.divIcon({
+        className: 'gov-marker',
+        html: `<div style="background-color: #ef4444; border: 2px solid white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.5);"><i class="fa-solid fa-building-flag" style="color: white; font-size: 12px;"></i></div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      });
+      const m = L.marker([b.lat, b.lng], { icon: govIcon, title: b.name, zIndexOffset: 1000 }).addTo(state.map);
+      m.bindPopup(`<div style="font-size: 13px; font-weight: bold; text-align: center; color: #ef4444;"><i class="fa-solid fa-building-flag"></i> ${b.name}</div>`);
+    });
 
     document.addEventListener('open-camera-modal', (e) => {
       openModal(e.detail);
