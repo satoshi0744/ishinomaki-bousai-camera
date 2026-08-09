@@ -75,7 +75,7 @@
 
     // 気仙沼・南三陸
     if (name.includes('気仙沼') || name.includes('南三陸') || name.includes('志津川') || name.includes('津谷') || name.includes('本吉')) {
-      return { id: 'group_kesennuma', title: '🌊 気仙沼・本吉・南三陸エリア', icon: 'fa-fish', order: 7, defaultOpen: false };
+      return { id: 'group_kesennuma', title: '🌊 気仙沼圏', icon: 'fa-fish', order: 7, defaultOpen: false };
     }
 
     // 仙台・仙塩・県南
