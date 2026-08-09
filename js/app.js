@@ -412,32 +412,35 @@
       const categoryLabel = CONFIG.CATEGORY_LABELS[category] || 'その他';
       let popupImgHtml = '';
       if (camera.imageUrl) {
-        popupImgHtml = `<img src="${camera.imageUrl}" class="hover-popup-img" alt="${camera.name}">`;
+        popupImgHtml = `<img src="${camera.imageUrl}" class="hover-popup-img" alt="${camera.name}" style="cursor: pointer;" onclick="document.dispatchEvent(new CustomEvent('open-camera-modal', {detail: '${camera.id}'}))">`;
       } else {
-        popupImgHtml = `<div class="hover-popup-noimg">配信元サイトで映像確認</div>`;
+        popupImgHtml = `
+          <div class="hover-popup-noimg" style="margin-bottom: 5px; font-size: 11px;">静止画データなし</div>
+          <a href="${camera.sourceUrl}" target="_blank" rel="noopener noreferrer" style="display: block; background: var(--accent); color: white; text-align: center; padding: 6px; border-radius: 4px; text-decoration: none; font-size: 11px; margin-bottom: 5px;">
+            <i class="fa-solid fa-external-link"></i> 公式サイトを開く
+          </a>
+        `;
       }
 
       const popupContent = `
-        <div class="hover-popup">
+        <div class="hover-popup" style="pointer-events: auto;">
           <div class="hover-popup-title">${camera.name}</div>
           ${popupImgHtml}
-          <div class="hover-popup-hint"><i class="fa-solid fa-expand"></i> ピンをクリックで大画面表示</div>
+          <button style="width: 100%; padding: 6px; background: #374151; color: white; border: none; border-radius: 4px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;" onclick="document.dispatchEvent(new CustomEvent('open-camera-modal', {detail: '${camera.id}'}))">
+            <i class="fa-solid fa-expand"></i> 詳細・大画面
+          </button>
         </div>
       `;
-      marker.bindPopup(popupContent, { closeButton: false, offset: [0, -10] });
+      marker.bindPopup(popupContent, { closeButton: true, offset: [0, -10] });
 
-      // ピン直接クリック時：大画面映像モーダルを表示
+      // スマホ対応：タップ時に小さな吹き出しポップアップを開く
       marker.on('click', () => {
-        marker.closePopup(); // スマホ環境で開いてしまう小ポップアップを閉じる
-        openModal(camera.id);
+        marker.openPopup();
       });
 
-      // マーカーにマウスを乗せた時：小画像ポップアップを開き、右側リストを連携スクロール
+      // マーカーにマウスを乗せた時：小画像ポップアップを開く（PC用）
       marker.on('mouseover', () => {
-        // スマホなどのタッチデバイスではホバーポップアップを出さない
-        if (window.matchMedia("(hover: hover)").matches) {
-          marker.openPopup();
-        }
+        marker.openPopup();
 
         // 右側サイドバーの連携スクロール
         const gMeta = getGroupForCamera(camera);
@@ -452,11 +455,6 @@
           card.classList.add('card-highlight');
           setTimeout(() => card.classList.remove('card-highlight'), 2000);
         }
-      });
-
-      // マーカーからマウスが離れた時：小画像ポップアップを自動で閉じる
-      marker.on('mouseout', () => {
-        marker.closePopup();
       });
 
       if (state.layers[category]) {
