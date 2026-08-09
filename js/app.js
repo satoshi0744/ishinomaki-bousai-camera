@@ -1046,4 +1046,26 @@
     );
   };
 
+  // ■ 使い方・凡例モーダルの初期化
+  function initInfoModal() {
+    const btn = document.getElementById('info-btn');
+    const modal = document.getElementById('info-modal-overlay');
+    const closeBtn = document.getElementById('info-modal-close');
+    
+    if (!btn || !modal) return;
+    
+    btn.addEventListener('click', () => {
+      modal.classList.add('show');
+    });
+    
+    closeBtn.addEventListener('click', () => {
+      modal.classList.remove('show');
+    });
+    
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.classList.remove('show');
+    });
+  }
+
+
 })();
