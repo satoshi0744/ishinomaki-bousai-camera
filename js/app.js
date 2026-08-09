@@ -428,13 +428,16 @@
 
       // ピン直接クリック時：大画面映像モーダルを表示
       marker.on('click', () => {
+        marker.closePopup(); // スマホ環境で開いてしまう小ポップアップを閉じる
         openModal(camera.id);
       });
 
       // マーカーにマウスを乗せた時：小画像ポップアップを開き、右側リストを連携スクロール
       marker.on('mouseover', () => {
-        // 小画像ポップアップを表示（他のポップアップは自動で閉じます）
-        marker.openPopup();
+        // スマホなどのタッチデバイスではホバーポップアップを出さない
+        if (window.matchMedia("(hover: hover)").matches) {
+          marker.openPopup();
+        }
 
         // 右側サイドバーの連携スクロール
         const gMeta = getGroupForCamera(camera);
@@ -810,13 +813,19 @@
         imageArea.innerHTML = `
           <div class="modal-placeholder">
             <i class="fa-brands fa-youtube" style="color: #ef4444;"></i>
-            <span>YouTube配信 — 配信元サイトで映像を確認してください</span>
+            <span>YouTube配信</span>
+            <a href="${camera.sourceUrl}" target="_blank" rel="noopener noreferrer" class="btn-source" style="margin-top: 15px; display: inline-block; background: var(--accent); color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none;">
+              <i class="fa-solid fa-external-link"></i> YouTubeで映像を確認する
+            </a>
           </div>`;
       } else {
         imageArea.innerHTML = `
           <div class="modal-placeholder">
             <i class="fa-solid ${categoryIcon}"></i>
-            <span>配信元サイトで映像を確認してください</span>
+            <span>静止画または動画ストリーム</span>
+            <a href="${camera.sourceUrl}" target="_blank" rel="noopener noreferrer" class="btn-source" style="margin-top: 15px; display: inline-block; background: var(--accent); color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none;">
+              <i class="fa-solid fa-external-link"></i> 配信元サイトを開いて映像を確認
+            </a>
           </div>`;
       }
     }
