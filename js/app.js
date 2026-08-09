@@ -300,6 +300,10 @@
         options.forEach(o => o.classList.remove('active'));
         opt.classList.add('active');
         if (currentText) currentText.textContent = opt.textContent.split('（')[0];
+        
+        modal.classList.remove('active');
+        applyAllFilters(); // マーカーとリストを再描画
+
         // エリアに応じて地図の中心を合同庁舎へ移動（アニメーションの中断を防ぐため少し遅延させる）
         setTimeout(() => {
           if (state.map) {
@@ -313,7 +317,7 @@
               'kesennuma': [38.8881, 141.5698]
             };
             if (areaCoords[area]) {
-              state.map.flyTo(areaCoords[area], 10, { animate: true, duration: 1.0 });
+              state.map.flyTo(areaCoords[area], 11, { animate: true, duration: 1.0 });
             } else if (area === 'all') {
               state.map.flyTo(CONFIG.MAP_CENTER, CONFIG.MAP_ZOOM, { animate: true, duration: 1.0 });
             }
