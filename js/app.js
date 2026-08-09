@@ -463,12 +463,26 @@
           </button>
         </div>
       `;
-      marker.bindTooltip(popupContent, {
-        direction: 'auto',
-        interactive: true,
-        className: 'custom-smart-tooltip',
-        offset: [0, 0]
-      });
+      // ポップアップを開く際、画面の余白に応じて位置（オフセットと方向）を動的に設定して開く
+      const openSmartTooltip = () => {
+        if (!state.map) return;
+        
+        // 地図コンテナ（画面）上の座標を取得
+        const pt = state.map.latLngToContainerPoint(marker.getLatLng());
+        
+        // 画面上部から280px未満の場合は下向き、それ以外は上向きに強制
+        const direction = pt.y < 280 ? 'bottom' : 'top';
+        const offset = direction === 'bottom' ? [0, 20] : [0, -10];
+
+        // 既存のTooltipを解除して再設定
+        marker.unbindTooltip();
+        marker.bindTooltip(popupContent, {
+          direction: direction,
+          interactive: true,
+          className: 'custom-smart-tooltip',
+          offset: offset
+        }).openTooltip();
+      };
 
       // サイドバーのスクロール連動関数
       const syncSidebarScroll = () => {
@@ -496,13 +510,13 @@
 
       // スマホ対応：タップ時にスマートポップアップを開く
       marker.on('click', () => {
-        marker.openTooltip();
+        openSmartTooltip();
         syncSidebarScroll();
       });
 
       // マーカーにマウスを乗せた時（PC用）
       marker.on('mouseover', () => {
-        marker.openTooltip();
+        openSmartTooltip();
         syncSidebarScroll();
       });
 
@@ -1030,21 +1044,29 @@
           <div class="hover-popup-hint" style="color: #10b981;"><i class="fa-solid fa-chart-line"></i> クリックで断面図・リアルタイム水位・予測を表示</div>
         </div>
       `;
-      marker.bindTooltip(popupContent, {
-        direction: 'auto',
-        interactive: true,
-        className: 'custom-smart-tooltip',
-        offset: [0, 0]
-      });
+      const openSmartWaterTooltip = () => {
+        if (!state.map) return;
+        const pt = state.map.latLngToContainerPoint(marker.getLatLng());
+        const direction = pt.y < 280 ? 'bottom' : 'top';
+        const offset = direction === 'bottom' ? [0, 20] : [0, -10];
+
+        marker.unbindTooltip();
+        marker.bindTooltip(popupContent, {
+          direction: direction,
+          interactive: true,
+          className: 'custom-smart-tooltip',
+          offset: offset
+        }).openTooltip();
+      };
 
       // スマホ対応：タップで開く
       marker.on('click', () => {
-        marker.openTooltip();
+        openSmartWaterTooltip();
       });
 
       // ホバーで開く
       marker.on('mouseover', () => {
-        marker.openTooltip();
+        openSmartWaterTooltip();
       });
 
       // ピン直接クリック時：添付画像の画面がそのままモーダル内に開く（方法1：リアルタイム画面埋め込み）
