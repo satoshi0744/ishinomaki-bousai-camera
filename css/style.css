@@ -1229,3 +1229,14 @@ body {
 .info-btn:hover {
   color: var(--text-primary);
 }
+
+/* ==========================================================================
+   スマート・ポップアップ用設定
+   ========================================================================== */
+.custom-smart-popup .leaflet-popup-tip-container {
+  display: none !important; /* ピンの尻尾（三角形）を非表示にしてズレをごまかす */
+}
+.custom-smart-popup .leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}

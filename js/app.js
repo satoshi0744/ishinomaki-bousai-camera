@@ -463,18 +463,35 @@
           </button>
         </div>
       `;
-      marker.bindPopup(popupContent, { closeButton: true, offset: [0, -10] });
+      const popup = L.popup({
+        closeButton: true,
+        autoPan: false, // 地図が勝手に動くのを防ぐ
+        className: 'custom-smart-popup'
+      }).setContent(popupContent);
+      marker.bindPopup(popup);
 
-      // スマホ対応：タップ時に小さな吹き出しポップアップを開く
-      marker.on('click', () => {
+      // ポップアップを開く際、画面の余白に応じて位置（オフセット）を自動調整する関数
+      const openSmartPopup = () => {
+        if (!state.map) return;
+        const pt = state.map.latLngToContainerPoint(marker.getLatLng());
+        const mapSize = state.map.getSize();
+        
+        let offsetX = 0;
+        let offsetY = -10; // デフォルトは上方向
+
+        // 上部に余白がない（約280px以下）場合は下方向に表示
+        if (pt.y < 280) offsetY = 35;
+        // 左に余白がない場合は右にずらす
+        if (pt.x < 150) offsetX = 100;
+        // 右に余白がない場合は左にずらす
+        if (pt.x > mapSize.x - 150) offsetX = -100;
+        
+        popup.options.offset = [offsetX, offsetY];
         marker.openPopup();
-      });
+      };
 
-      // マーカーにマウスを乗せた時：小画像ポップアップを開く（PC用）
-      marker.on('mouseover', () => {
-        marker.openPopup();
-
-        // 右側サイドバーの連携スクロール
+      // サイドバーのスクロール連動関数
+      const syncSidebarScroll = () => {
         const gMeta = getGroupForCamera(camera);
         state.accordionStates[gMeta.id] = true;
         const groupEl = document.querySelector(`.accordion-group[data-group-id="${gMeta.id}"]`);
@@ -487,6 +504,18 @@
           card.classList.add('card-highlight');
           setTimeout(() => card.classList.remove('card-highlight'), 2000);
         }
+      };
+
+      // スマホ対応：タップ時にスマートポップアップを開く
+      marker.on('click', () => {
+        openSmartPopup();
+        syncSidebarScroll();
+      });
+
+      // マーカーにマウスを乗せた時（PC用）
+      marker.on('mouseover', () => {
+        openSmartPopup();
+        syncSidebarScroll();
       });
 
       if (state.layers[category]) {
