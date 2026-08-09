@@ -272,15 +272,15 @@
     }
 
     btn.addEventListener('click', () => {
-      modal.classList.add('show');
+      modal.classList.add('active');
     });
     
     closeBtn.addEventListener('click', () => {
-      modal.classList.remove('show');
+      modal.classList.remove('active');
     });
     
     modal.addEventListener('click', (e) => {
-      if (e.target === modal) modal.classList.remove('show');
+      if (e.target === modal) modal.classList.remove('active');
     });
 
     options.forEach(opt => {
@@ -293,7 +293,7 @@
         opt.classList.add('active');
         if (currentText) currentText.textContent = opt.textContent.split('（')[0];
         
-        modal.classList.remove('show');
+        modal.classList.remove('active');
         applyAllFilters(); // マーカーとリストを再描画
       });
     });
@@ -1055,15 +1055,15 @@
     if (!btn || !modal) return;
     
     btn.addEventListener('click', () => {
-      modal.classList.add('show');
+      modal.classList.add('active');
     });
     
     closeBtn.addEventListener('click', () => {
-      modal.classList.remove('show');
+      modal.classList.remove('active');
     });
     
     modal.addEventListener('click', (e) => {
-      if (e.target === modal) modal.classList.remove('show');
+      if (e.target === modal) modal.classList.remove('active');
     });
   }
 
