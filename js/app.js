@@ -239,18 +239,26 @@
     });
   }
 
-  // ■ エリア（管内）判定ロジック
+  // ■ エリア（広域圏）の判定ロジック（7圏域）
   function getAreaForCamera(camera) {
-    const name = camera.name || '';
-    const group = getGroupForCamera(camera);
+    const text = (camera.name || '') + ' ' + (camera.description || '') + ' ' + (camera.operator || '') + ' ' + (camera.city || '') + ' ' + (camera.address || '');
     
-    if (group.id === 'group_kyu_kitakami' || group.id === 'group_kitakami' || group.id === 'group_naruse' || name.includes('石巻') || name.includes('東松島') || name.includes('女川') || name.includes('牡鹿')) return 'ishinomaki';
-    if (group.id === 'group_tome_kurihara' || name.includes('登米') || name.includes('栗原')) return 'tome';
-    if (group.id === 'group_osaki_kami' || name.includes('大崎') || name.includes('加美') || name.includes('色麻') || name.includes('美里') || name.includes('涌谷')) return 'osaki';
-    if (group.id === 'group_sendai' || name.includes('仙台') || name.includes('名取') || name.includes('塩竈') || name.includes('松島') || name.includes('岩沼')) return 'sendai';
-    if (group.id === 'group_kesennuma' || name.includes('気仙沼') || name.includes('南三陸') || name.includes('本吉')) return 'kesennuma';
+    // 気仙沼圏
+    if (text.includes('気仙沼') || text.includes('南三陸') || text.includes('本吉')) return 'kesennuma';
+    // 登米圏
+    if (text.includes('登米') || text.includes('津山') || text.includes('豊里') || text.includes('米山') || text.includes('中田') || text.includes('東和') || text.includes('南方') || text.includes('石越')) return 'tome';
+    // 栗原圏
+    if (text.includes('栗原') || text.includes('若柳') || text.includes('築館') || text.includes('高清水') || text.includes('瀬峰') || text.includes('金成') || text.includes('志波姫') || text.includes('鶯沢') || text.includes('花山')) return 'kurihara';
+    // 大崎圏
+    if (text.includes('大崎') || text.includes('古川') || text.includes('三本木') || text.includes('松山') || text.includes('鹿島台') || text.includes('田尻') || text.includes('岩出山') || text.includes('鳴子') || text.includes('加美') || text.includes('色麻') || text.includes('涌谷') || text.includes('美里')) return 'osaki';
+    // 石巻圏
+    if (text.includes('石巻') || text.includes('東松島') || text.includes('女川') || text.includes('牡鹿') || text.includes('矢本') || text.includes('鳴瀬') || text.includes('河南') || text.includes('桃生') || text.includes('北上') || text.includes('雄勝')) return 'ishinomaki';
+    // 仙南圏（大河原）
+    if (text.includes('大河原') || text.includes('白石') || text.includes('角田') || text.includes('蔵王') || text.includes('七ヶ宿') || text.includes('村田') || text.includes('柴田') || text.includes('川崎') || text.includes('丸森')) return 'sennan';
+    // 仙台圏（それ以外の大半）
+    if (text.includes('仙台') || text.includes('名取') || text.includes('岩沼') || text.includes('亘理') || text.includes('山元') || text.includes('塩竈') || text.includes('多賀城') || text.includes('松島') || text.includes('七ヶ浜') || text.includes('利府') || text.includes('富谷') || text.includes('大和') || text.includes('大郷') || text.includes('大衡')) return 'sendai';
     
-    return 'all'; // その他（岩手など）はallで表示
+    return 'all'; // 判別不能な場合はすべて表示に含める
   }
 
   // ■ エリアフィルターの初期化
@@ -295,6 +303,24 @@
         
         modal.classList.remove('active');
         applyAllFilters(); // マーカーとリストを再描画
+
+        // エリアに応じて地図の中心を合同庁舎へ移動
+        if (state.map) {
+          const areaCoords = {
+            'sennan': [38.0495, 140.7307],
+            'sendai': [38.2784, 140.8673],
+            'osaki': [38.5665, 140.9745],
+            'kurihara': [38.7381, 141.0194],
+            'tome': [38.6578, 141.2764],
+            'ishinomaki': [38.4407, 141.2573],
+            'kesennuma': [38.8881, 141.5698]
+          };
+          if (areaCoords[area]) {
+            state.map.flyTo(areaCoords[area], 10, { duration: 1.5 });
+          } else if (area === 'all') {
+            state.map.flyTo(CONFIG.MAP_CENTER, CONFIG.MAP_ZOOM, { duration: 1.5 });
+          }
+        }
       });
     });
   }
@@ -369,13 +395,13 @@
   }
 
   // ■ マーカーアイコンの作成
-  function createMarkerIcon(category, status, heading, headingName) {
+  function createMarkerIcon(category, status, heading, headingName, hasImage = true) {
     let color = CONFIG.CATEGORY_COLORS[category] || CONFIG.CATEGORY_COLORS.other;
     let iconClass = CONFIG.CATEGORY_ICONS[category] || CONFIG.CATEGORY_ICONS.other;
     
-    if (status === 'maintenance') {
-      color = '#9ca3af';
-      iconClass = 'fa-wrench';
+    // 静止画データがない、もしくはメンテナンス中の場合はグレーアウト
+    if (status === 'maintenance' || !hasImage) {
+      color = '#9ca3af'; // グレー
     }
     
     return L.divIcon({
@@ -404,8 +430,12 @@
 
     CAMERA_DATA.forEach(camera => {
       const category = camera.category || 'other';
+      
+      // 画像が存在するかどうかの判定（youtubeの場合は別扱い）
+      const hasImage = !!camera.imageUrl || (camera.streamType === 'youtube' && !!camera.youtubeId);
+      
       const marker = L.marker([camera.lat, camera.lng], {
-        icon: createMarkerIcon(category, camera.status, camera.heading, camera.headingName),
+        icon: createMarkerIcon(category, camera.status, camera.heading, camera.headingName, hasImage),
         title: camera.name
       });
       
@@ -849,10 +879,6 @@
         <div class="modal-detail-row">
           <span class="modal-detail-label">配信形式</span>
           <span class="modal-detail-value">${camera.streamType === 'youtube' ? 'YouTube Live' : camera.streamType === 'stream' ? '動画ストリーム' : '静止画（定期更新）'}</span>
-        </div>
-        <div class="modal-detail-row">
-          <span class="modal-detail-label">座標</span>
-          <span class="modal-detail-value">${camera.lat.toFixed(4)}, ${camera.lng.toFixed(4)}</span>
         </div>
       `;
     }
