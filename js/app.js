@@ -93,7 +93,7 @@
     markers: {},
     activeCategoryFilters: new Set(['river', 'road', 'coast', 'city', 'other']),
     activeOperatorFilter: 'all',
-    activeAreaFilter: localStorage.getItem('ishinomaki_area_filter') || 'ishinomaki', // ★初期値を「石巻圏」に設定（軽量化）
+    activeAreaFilter: localStorage.getItem('ishinomaki_area_filter') || 'all', // 初期値を「全県域」に設定
     favorites: new Set(),
     searchQuery: '',
     accordionStates: {},
