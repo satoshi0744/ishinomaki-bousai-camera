@@ -563,20 +563,31 @@
         if (groupEl && !groupEl.classList.contains('open')) {
           groupEl.classList.add('open');
         }
-        const card = document.querySelector(`.camera-card[data-camera-id="${camera.id}"]`);
-        const sidebar = document.getElementById('sidebar');
-        if (card && sidebar) {
-          // 画面全体がスクロールしないよう、サイドバー内部のスクロール位置のみを計算して移動
-          const sidebarRect = sidebar.getBoundingClientRect();
-          const cardRect = card.getBoundingClientRect();
-          sidebar.scrollBy({
-            top: cardRect.top - sidebarRect.top - 50, // 50pxの余白
-            behavior: 'smooth'
-          });
-          
-          card.classList.add('card-highlight');
-          setTimeout(() => card.classList.remove('card-highlight'), 2000);
-        }
+        
+        // アコーディオンが展開されてDOMの高さが確定するのを少し待ってからスクロール位置を計算
+        setTimeout(() => {
+          const card = document.querySelector(`.camera-card[data-camera-id="${camera.id}"]`);
+          const sidebar = document.getElementById('sidebar');
+          if (card && sidebar) {
+            // 画面全体がスクロールしないよう、サイドバー内部のスクロール位置のみを計算して移動
+            const sidebarRect = sidebar.getBoundingClientRect();
+            const cardRect = card.getBoundingClientRect();
+            
+            // cardが画面内に見えているかどうかの判定（すでに見えていれば過剰なスクロールを防ぐ）
+            const isVisible = (cardRect.top >= sidebarRect.top) && (cardRect.bottom <= sidebarRect.bottom);
+            
+            if (!isVisible) {
+              sidebar.scrollBy({
+                top: cardRect.top - sidebarRect.top - 50, // 50pxの余白
+                behavior: 'smooth'
+              });
+            }
+            
+            // ハイライト効果
+            card.classList.add('card-highlight');
+            setTimeout(() => card.classList.remove('card-highlight'), 2000);
+          }
+        }, 150); // アコーディオンのCSSトランジションにある程度合わせる
       };
 
       let popupHoverTimeout = null;
