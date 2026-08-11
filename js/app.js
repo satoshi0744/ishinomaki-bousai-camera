@@ -441,7 +441,7 @@
     const status = camera.status;
     
     // タイプB（動画・ライブ配信・静止画なし）の判定
-    const isTypeB = camera.streamType === 'youtube' || camera.streamType === 'stream' || category === 'road' || !camera.imageUrl;
+    const isTypeB = camera.streamType === 'youtube' || camera.streamType === 'stream' || !camera.imageUrl;
 
     let color = isTypeB ? '#8b5cf6' : (CONFIG.CATEGORY_COLORS[category] || CONFIG.CATEGORY_COLORS.other); // タイプBは紫色
     let iconClass = isTypeB ? 'fa-video' : 'fa-camera'; // タイプA: カメラ📷, タイプB: ビデオカメラ📹
@@ -488,7 +488,7 @@
       
       const categoryLabel = CONFIG.CATEGORY_LABELS[category] || 'その他';
       let popupImgHtml = '';
-      const isTypeB = camera.streamType === 'youtube' || camera.streamType === 'stream' || category === 'road' || !camera.imageUrl;
+      const isTypeB = camera.streamType === 'youtube' || camera.streamType === 'stream' || !camera.imageUrl;
       
       if (isTypeB) {
         popupImgHtml = `
@@ -629,7 +629,7 @@
     const isFav = state.favorites.has(camera.id);
     
     let previewHtml = '';
-    const isTypeB = camera.streamType === 'youtube' || camera.streamType === 'stream' || category === 'road' || !camera.imageUrl;
+    const isTypeB = camera.streamType === 'youtube' || camera.streamType === 'stream' || !camera.imageUrl;
     
     if (camera.status === 'maintenance') {
       previewHtml = `<div class="card-placeholder" style="color: #9ca3af;">
@@ -955,7 +955,7 @@
             <i class="fa-solid fa-wrench"></i>
             <span>現在、機器調整中または休止中のため映像を取得できません。</span>
           </div>`;
-      } else if (camera.streamType === 'stream' || camera.streamType === 'youtube' || camera.category === 'road') {
+      } else if (camera.streamType === 'stream' || camera.streamType === 'youtube') {
         // タイプB: ライブ動画・参照型（ダミー画像を出さず案内カードを表示）
         imageArea.innerHTML = `
           <div class="modal-placeholder" style="color: var(--text-primary); display: flex; flex-direction: column; gap: 1rem; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 2rem; background: var(--bg-tertiary);">
