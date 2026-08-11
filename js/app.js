@@ -127,6 +127,9 @@
 
     // 起動時の初期エリアフォーカスとアコーディオン展開
     setTimeout(() => {
+      if (state.map) {
+        state.map.invalidateSize();
+      }
       applyAreaFocusAndExpand(state.activeAreaFilter);
     }, 500); // マーカー描画後
   }
@@ -1131,15 +1134,6 @@
     if (typeof WATER_LEVEL_STATIONS === 'undefined' || !state.layers['water_level']) return;
 
     WATER_LEVEL_STATIONS.forEach(station => {
-      // 【テスト用強制上書き】
-      // water_level_stations.js がブラウザの強力なキャッシュに残っている場合でも
-      // テストが確実に反映されるように app.js 側で強制的にレベルを設定します。
-      if (station.name.includes('新明治橋')) {
-        station.level = 'danger';
-      } else if (station.name.includes('赤井')) {
-        station.level = 'warning';
-      }
-
       // 警戒レベル・水防水位に応じた動的カラー判定
       let levelColor = '#10b981'; // デフォルト: 正常(緑)
       let levelText = '平常水位 (正常)';
