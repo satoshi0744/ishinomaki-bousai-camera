@@ -87,13 +87,15 @@
   }
 
   // ■ 状態管理
-  let state = {
+  const state = {
+    cameras: [],
+    waterLevelStations: [],
     map: null,
     layers: {},
     markers: {},
     activeCategoryFilters: new Set(['river', 'road', 'coast', 'city', 'other']),
     activeOperatorFilter: 'all',
-    activeAreaFilter: localStorage.getItem('ishinomaki_area_filter') || 'all', // 初期値を「全県域」に設定
+    activeAreaFilter: localStorage.getItem('ishinomaki_area_filter') || 'all',
     favorites: new Set(),
     searchQuery: '',
     accordionStates: {},
@@ -121,6 +123,11 @@
     initInfoModal();
     startAutoRefresh();
     updateStatusBar();
+
+    // 起動時の初期エリアフォーカスとアコーディオン展開
+    setTimeout(() => {
+      applyAreaFocusAndExpand(state.activeAreaFilter);
+    }, 500); // マーカー描画後
   }
 
   // ■ お気に入りの読み込み・保存
@@ -304,27 +311,59 @@
         modal.classList.remove('active');
         applyAllFilters(); // マーカーとリストを再描画
 
-        // エリアに応じて地図の中心を合同庁舎へ移動（アニメーションの中断を防ぐため少し遅延させる）
+        // エリアに応じたフォーカスとアコーディオン展開を実行
         setTimeout(() => {
-          if (state.map) {
-            const areaCoords = {
-              'sennan': [38.0495, 140.7307],
-              'sendai': [38.2784, 140.8673],
-              'osaki': [38.5665, 140.9745],
-              'kurihara': [38.7381, 141.0194],
-              'tome': [38.6578, 141.2764],
-              'ishinomaki': [38.4407, 141.2573],
-              'kesennuma': [38.8881, 141.5698]
-            };
-            if (areaCoords[area]) {
-              state.map.flyTo(areaCoords[area], 11, { animate: true, duration: 1.0 });
-            } else if (area === 'all') {
-              state.map.flyTo(CONFIG.MAP_CENTER, CONFIG.MAP_ZOOM, { animate: true, duration: 1.0 });
-            }
-          }
+          applyAreaFocusAndExpand(area);
         }, 150);
       });
     });
+  }
+
+
+  // ■ 選択管内のフォーカスとアコーディオン展開
+  function applyAreaFocusAndExpand(area) {
+    if (!state.map) return;
+    
+    // 1. 地図の中心を合同庁舎へ移動
+    const areaCoords = {
+      'sennan': [38.0495, 140.7307],
+      'sendai': [38.2784, 140.8673],
+      'osaki': [38.5665, 140.9745],
+      'kurihara': [38.7381, 141.0194],
+      'tome': [38.6578, 141.2764],
+      'ishinomaki': [38.4407, 141.2573],
+      'kesennuma': [38.8881, 141.5698]
+    };
+    
+    if (areaCoords[area]) {
+      state.map.flyTo(areaCoords[area], 11.5, { animate: true, duration: 1.0 });
+    } else if (area === 'all') {
+      state.map.flyTo(CONFIG.MAP_CENTER, CONFIG.MAP_ZOOM, { animate: true, duration: 1.0 });
+    }
+    
+    // 2. 該当エリアのグループ（アコーディオン）を自動展開
+    if (area !== 'all') {
+      const areaGroupMap = {
+        'sennan': [], // 仙南圏は現状河川カメラなし
+        'sendai': ['group_sendai'],
+        'osaki': ['group_osaki_kami'],
+        'kurihara': ['group_tome_kurihara'],
+        'tome': ['group_tome_kurihara'],
+        'ishinomaki': ['group_kyu_kitakami', 'group_kitakami', 'group_naruse'],
+        'kesennuma': ['group_kesennuma']
+      };
+      const targetGroups = areaGroupMap[area] || [];
+      if (targetGroups.length > 0) {
+        // 他のグループは閉じ、対象グループのみ開く
+        Object.keys(state.accordionStates).forEach(groupId => {
+           state.accordionStates[groupId] = targetGroups.includes(groupId);
+        });
+        targetGroups.forEach(groupId => {
+           state.accordionStates[groupId] = true;
+        });
+        renderSidebarList(); // サイドバーの再描画（アコーディオン状態反映）
+      }
+    }
   }
 
   // ■ すべてのフィルター（カテゴリー、管理者、エリア、検索）を地図マーカーに適用
@@ -397,19 +436,25 @@
   }
 
   // ■ マーカーアイコンの作成
-  function createMarkerIcon(category, status, heading, headingName, hasImage = true) {
-    let color = CONFIG.CATEGORY_COLORS[category] || CONFIG.CATEGORY_COLORS.other;
-    let iconClass = CONFIG.CATEGORY_ICONS[category] || CONFIG.CATEGORY_ICONS.other;
+  function createMarkerIcon(camera) {
+    const category = camera.category || 'other';
+    const status = camera.status;
     
-    // 静止画データがない、もしくはメンテナンス中の場合はグレーアウト
-    if (status === 'maintenance' || !hasImage) {
+    // タイプB（動画・ライブ配信・静止画なし）の判定
+    const isTypeB = camera.streamType === 'youtube' || camera.streamType === 'stream' || category === 'road' || !camera.imageUrl;
+
+    let color = isTypeB ? '#8b5cf6' : (CONFIG.CATEGORY_COLORS[category] || CONFIG.CATEGORY_COLORS.other); // タイプBは紫色
+    let iconClass = isTypeB ? 'fa-video' : 'fa-camera'; // タイプA: カメラ📷, タイプB: ビデオカメラ📹
+    
+    // メンテナンス中の場合はグレーアウト
+    if (status === 'maintenance') {
       color = '#9ca3af'; // グレー
     }
     
     return L.divIcon({
       className: 'custom-marker',
       html: `<div class="marker-wrapper">
-               <div class="marker-icon marker-${category}" style="background-color: ${color};">
+               <div class="marker-icon marker-${category}" style="background-color: ${color};" title="${isTypeB ? '📹 ライブ動画・参照' : '📷 静止画（即時写真）'}">
                  <i class="fa-solid ${iconClass}" style="color: white; font-size: 10px;"></i>
                </div>
              </div>`,
@@ -437,13 +482,26 @@
       const hasImage = !!camera.imageUrl || (camera.streamType === 'youtube' && !!camera.youtubeId);
       
       const marker = L.marker([camera.lat, camera.lng], {
-        icon: createMarkerIcon(category, camera.status, camera.heading, camera.headingName, hasImage),
+        icon: createMarkerIcon(camera),
         title: camera.name
       });
       
       const categoryLabel = CONFIG.CATEGORY_LABELS[category] || 'その他';
       let popupImgHtml = '';
-      if (camera.imageUrl) {
+      const isTypeB = camera.streamType === 'youtube' || camera.streamType === 'stream' || category === 'road' || !camera.imageUrl;
+      
+      if (isTypeB) {
+        popupImgHtml = `
+          <div style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 6px; padding: 8px; text-align: center; margin-bottom: 6px;">
+            <div style="font-size: 11px; color: #8b5cf6; font-weight: bold; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 4px;">
+              <i class="fa-solid fa-video"></i> ライブ動画配信中
+            </div>
+            <a href="${camera.sourceUrl}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 4px; background: linear-gradient(135deg, #7c3aed, #8b5cf6); color: white; text-align: center; padding: 6px 10px; border-radius: 4px; text-decoration: none; font-size: 11px; font-weight: bold; margin-top: 2px;">
+              <i class="fa-solid fa-play"></i> 映像を再生する
+            </a>
+          </div>
+        `;
+      } else if (camera.imageUrl) {
         popupImgHtml = `<img src="${camera.imageUrl}" class="hover-popup-img" alt="${camera.name}" style="cursor: pointer;" onclick="document.dispatchEvent(new CustomEvent('open-camera-modal', {detail: '${camera.id}'}))">`;
       } else {
         popupImgHtml = `
@@ -463,25 +521,31 @@
           </button>
         </div>
       `;
-      // ポップアップを開く際、画面の余白に応じて位置（オフセットと方向）を動的に設定して開く
-      const openSmartTooltip = () => {
-        if (!state.map) return;
-        
-        // 地図コンテナ（画面）上の座標を取得
-        const pt = state.map.latLngToContainerPoint(marker.getLatLng());
-        
-        // 画面上部から280px未満の場合は下向き、それ以外は上向きに強制
-        const direction = pt.y < 280 ? 'bottom' : 'top';
-        const offset = direction === 'bottom' ? [0, 20] : [0, -10];
+      const popup = L.popup({
+        closeButton: true,
+        autoPan: false, // 地図が勝手に動くのを防ぐ
+        className: 'custom-smart-popup'
+      }).setContent(popupContent);
+      marker.bindPopup(popup);
 
-        // 既存のTooltipを解除して再設定
-        marker.unbindTooltip();
-        marker.bindTooltip(popupContent, {
-          direction: direction,
-          interactive: true,
-          className: 'custom-smart-tooltip',
-          offset: offset
-        }).openTooltip();
+      // ポップアップを開く際、画面の余白に応じて位置（オフセット）を自動調整する関数
+      const openSmartPopup = () => {
+        if (!state.map) return;
+        const pt = state.map.latLngToContainerPoint(marker.getLatLng());
+        const mapSize = state.map.getSize();
+        
+        let offsetX = 0;
+        let offsetY = -28; // ピンアイコンの上に重ならないよう離隔を拡大
+
+        // 上部に余白がない（約280px以下）場合は下方向に表示
+        if (pt.y < 280) offsetY = 48; // ピンの足元からしっかり下へ離す
+        // 左に余白がない場合は右にずらす
+        if (pt.x < 150) offsetX = 100;
+        // 右に余白がない場合は左にずらす
+        if (pt.x > mapSize.x - 150) offsetX = -100;
+        
+        popup.options.offset = [offsetX, offsetY];
+        marker.openPopup();
       };
 
       // サイドバーのスクロール連動関数
@@ -510,13 +574,13 @@
 
       // スマホ対応：タップ時にスマートポップアップを開く
       marker.on('click', () => {
-        openSmartTooltip();
+        openSmartPopup();
         syncSidebarScroll();
       });
 
       // マーカーにマウスを乗せた時（PC用）
       marker.on('mouseover', () => {
-        openSmartTooltip();
+        openSmartPopup();
         syncSidebarScroll();
       });
 
@@ -565,18 +629,20 @@
     const isFav = state.favorites.has(camera.id);
     
     let previewHtml = '';
+    const isTypeB = camera.streamType === 'youtube' || camera.streamType === 'stream' || category === 'road' || !camera.imageUrl;
+    
     if (camera.status === 'maintenance') {
       previewHtml = `<div class="card-placeholder" style="color: #9ca3af;">
         <i class="fa-solid fa-wrench"></i>
         <span>現在調整中・休止中</span>
       </div>`;
+    } else if (isTypeB) {
+      previewHtml = `<div class="card-placeholder" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">
+        <i class="fa-solid fa-video" style="color: #8b5cf6; font-size: 1.2rem;"></i>
+        <span style="font-weight: bold; margin-top: 4px;">ライブ動画配信中</span>
+      </div>`;
     } else if (camera.imageUrl) {
       previewHtml = `<img src="${camera.imageUrl}" class="live-image" data-base-src="${camera.imageUrl}" alt="${camera.name}" onerror="this.onerror=null; this.outerHTML='<div class=\\'card-placeholder\\' style=\\'color: #ef4444;\\'><i class=\\'fa-solid fa-triangle-exclamation\\'></i><span>画像取得エラー</span></div>';">`;
-    } else if (camera.streamType === 'youtube' && camera.youtubeId) {
-      previewHtml = `<div class="card-placeholder">
-        <i class="fa-brands fa-youtube" style="color: #ef4444;"></i>
-        <span>動画配信中</span>
-      </div>`;
     } else {
       previewHtml = `<div class="card-placeholder">
         <i class="fa-solid ${categoryIcon}"></i>
@@ -889,17 +955,23 @@
             <i class="fa-solid fa-wrench"></i>
             <span>現在、機器調整中または休止中のため映像を取得できません。</span>
           </div>`;
-      } else if (camera.imageUrl) {
-        imageArea.innerHTML = `<img src="${camera.imageUrl}?t=${Date.now()}" alt="${camera.name}" onerror="this.onerror=null; this.outerHTML='<div class=\\'modal-placeholder\\' style=\\'color: #ef4444;\\'><i class=\\'fa-solid fa-triangle-exclamation\\'></i><span>画像取得エラー</span></div>';">`;
-      } else if (camera.streamType === 'youtube' && camera.youtubeId) {
+      } else if (camera.streamType === 'stream' || camera.streamType === 'youtube' || camera.category === 'road') {
+        // タイプB: ライブ動画・参照型（ダミー画像を出さず案内カードを表示）
         imageArea.innerHTML = `
-          <div class="modal-placeholder">
-            <i class="fa-brands fa-youtube" style="color: #ef4444;"></i>
-            <span>YouTube配信</span>
-            <a href="${camera.sourceUrl}" target="_blank" rel="noopener noreferrer" class="btn-source" style="margin-top: 15px; display: inline-block; background: var(--accent); color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none;">
-              <i class="fa-solid fa-external-link"></i> YouTubeで映像を確認する
+          <div class="modal-placeholder" style="color: var(--text-primary); display: flex; flex-direction: column; gap: 1rem; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 2rem; background: var(--bg-tertiary);">
+            <i class="fa-solid fa-video" style="font-size: 3.5rem; color: #8b5cf6;"></i>
+            <p style="font-size: 1.15rem; font-weight: bold; line-height: 1.5; margin: 0;">
+              「${camera.name}」はライブ動画・配信元参照カメラです
+            </p>
+            <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">
+              配信元サイト（公式サイト）でリアルタイム映像をご覧いただけます。
+            </p>
+            <a href="${camera.sourceUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: linear-gradient(135deg, #7c3aed, #8b5cf6); color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 1.05rem; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3); margin-top: 10px;">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> 公式サイトでライブ映像を再生する
             </a>
           </div>`;
+      } else if (camera.imageUrl) {
+        imageArea.innerHTML = `<img src="${camera.imageUrl}" alt="${camera.name}">`;
       } else {
         imageArea.innerHTML = `
           <div class="modal-placeholder">
@@ -975,7 +1047,7 @@
     images.forEach(img => {
       const baseSrc = img.getAttribute('data-base-src');
       if (baseSrc) {
-        img.src = `${baseSrc}?t=${Date.now()}`;
+        img.src = baseSrc;
       }
     });
 
@@ -1044,29 +1116,16 @@
           <div class="hover-popup-hint" style="color: #10b981;"><i class="fa-solid fa-chart-line"></i> クリックで断面図・リアルタイム水位・予測を表示</div>
         </div>
       `;
-      const openSmartWaterTooltip = () => {
-        if (!state.map) return;
-        const pt = state.map.latLngToContainerPoint(marker.getLatLng());
-        const direction = pt.y < 280 ? 'bottom' : 'top';
-        const offset = direction === 'bottom' ? [0, 20] : [0, -10];
+      marker.bindPopup(popupContent, { closeButton: false, offset: [0, -10] });
 
-        marker.unbindTooltip();
-        marker.bindTooltip(popupContent, {
-          direction: direction,
-          interactive: true,
-          className: 'custom-smart-tooltip',
-          offset: offset
-        }).openTooltip();
-      };
-
-      // スマホ対応：タップで開く
-      marker.on('click', () => {
-        openSmartWaterTooltip();
+      // ピンホバー時：小画像ポップアップを開く
+      marker.on('mouseover', () => {
+        marker.openPopup();
       });
 
-      // ホバーで開く
-      marker.on('mouseover', () => {
-        openSmartWaterTooltip();
+      // ピン離脱時：小ポップアップを閉じる
+      marker.on('mouseout', () => {
+        marker.closePopup();
       });
 
       // ピン直接クリック時：添付画像の画面がそのままモーダル内に開く（方法1：リアルタイム画面埋め込み）
