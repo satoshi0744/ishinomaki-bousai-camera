@@ -1139,22 +1139,20 @@
       let levelText = '平常水位 (正常)';
       let levelBadgeClass = 'warning-none';
       let stationClass = 'station-normal';
-      let tagHtml = '';
+      let tagHtml = ''; // ユーザー要望により常時表示タグは一旦非表示
 
       if (station.level === 'danger' || station.status === 'danger') {
         levelColor = '#ef4444'; // 氾濫危険・避難判断 (赤)
         levelText = '氾濫危険水位超過 (レベル3〜4相当)';
         levelBadgeClass = 'warning-danger';
         stationClass = 'station-danger';
-        const shortName = station.name.replace(' 水位観測所', '');
-        tagHtml = `<div class="always-visible-alert-tag danger-tag">🚨 ${shortName}【氾濫危険】</div>`;
+        // tagHtml = `<div class="always-visible-alert-tag danger-tag">🚨 ${shortName}【氾濫危険】</div>`;
       } else if (station.level === 'warning' || station.status === 'warning') {
         levelColor = '#f59e0b'; // 氾濫注意 (黄)
         levelText = '氾濫注意水位超過 (レベル2相当)';
         levelBadgeClass = 'warning-caution';
         stationClass = 'station-warning';
-        const shortName = station.name.replace(' 水位観測所', '');
-        tagHtml = `<div class="always-visible-alert-tag warning-tag">⚠️ ${shortName}【氾濫注意】</div>`;
+        // tagHtml = `<div class="always-visible-alert-tag warning-tag">⚠️ ${shortName}【氾濫注意】</div>`;
       } else if (station.status === 'maintenance' || station.status === 'inactive') {
         levelColor = '#9ca3af'; // 欠測・調整中 (灰)
         levelText = 'データ調整中';
