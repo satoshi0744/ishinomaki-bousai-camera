@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>JMA API Test</title></head>
+<body>
+<h2>JMA API CORS Test</h2>
+<div id="result">Loading...</div>
+<script>
+async function test() {
+  const el = document.getElementById('result');
+  try {
+    const res = await fetch('https://www.jma.go.jp/bosai/warning/data/warning/040000.json');
+    el.innerHTML += '<br>Status: ' + res.status;
+    const data = await res.json();
+    el.innerHTML += '<br>Keys: ' + Object.keys(data).join(', ');
+    el.innerHTML += '<br>areaTypes count: ' + (data.areaTypes ? data.areaTypes.length : 'NONE');
+    if (data.areaTypes) {
+      data.areaTypes.forEach((at, i) => {
+        el.innerHTML += '<br>areaType[' + i + '] areas count: ' + (at.areas ? at.areas.length : 'NONE');
+        if (at.areas) {
+          const found = at.areas.find(a => a.code === '0420200');
+          if (found) {
+            el.innerHTML += '<br>石巻市 found! warnings: ' + JSON.stringify(found.warnings);
+          }
+        }
+      });
+    }
+  } catch (e) {
+    el.innerHTML = '<br>ERROR: ' + e.message;
+  }
+}
+test();
+</script>
+</body></html>
