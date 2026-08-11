@@ -572,6 +572,8 @@
         }
       };
 
+      let popupHoverTimeout = null;
+
       // スマホ対応：タップ時にスマートポップアップを開く
       marker.on('click', () => {
         openSmartPopup();
@@ -580,8 +582,37 @@
 
       // マーカーにマウスを乗せた時（PC用）
       marker.on('mouseover', () => {
+        if (popupHoverTimeout) {
+          clearTimeout(popupHoverTimeout);
+          popupHoverTimeout = null;
+        }
         openSmartPopup();
         syncSidebarScroll();
+      });
+
+      // マーカーからマウスを外した時（少し遅延させて消す）
+      marker.on('mouseout', () => {
+        popupHoverTimeout = setTimeout(() => {
+          marker.closePopup();
+        }, 250);
+      });
+
+      // ポップアップ自体にマウスが乗っている間は消さず、外れたら消す
+      popup.on('add', () => {
+        const popupEl = popup.getElement();
+        if (popupEl) {
+          popupEl.addEventListener('mouseenter', () => {
+            if (popupHoverTimeout) {
+              clearTimeout(popupHoverTimeout);
+              popupHoverTimeout = null;
+            }
+          });
+          popupEl.addEventListener('mouseleave', () => {
+            popupHoverTimeout = setTimeout(() => {
+              marker.closePopup();
+            }, 250);
+          });
+        }
       });
 
       if (state.layers[category]) {
