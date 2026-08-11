@@ -300,6 +300,7 @@ const WATER_LEVEL_STATIONS = [
     address: "宮城県石巻市大瓜地内",
     lat: 38.45694,
     lng: 141.3475,
+    level: "danger",
     systemUrl: "https://www.dobokusougou.pref.miyagi.jp/miyagi/servlet/Gamen22Servlet?param=common=dispDate:null$duration:60$timeNumber:24$pageGroup:%E7%9F%B3%E5%B7%BB%E5%9C%B0%E5%9F%9F$page:1$itemPageGroup:1H$itemPage:1$stationNo:104004123$kioDispDate:null$kioPattern:1$dispEventNumber:1$station2No:0$autoType:false$riverName:null$mapClassSwich:0$lScaleMax:0$lScaleMin:0$rScaleMax:0$rScaleMin:0$lScaleMax2:0$lScaleMin2:0$rScaleMax2:0$rScaleMin2:0$ShiftWidth:0$anypage:0$freeStr:null$freeNo:1",
     operator: "宮城県"
   },
@@ -339,6 +340,7 @@ const WATER_LEVEL_STATIONS = [
     address: "宮城県東松島市赤井川前3",
     lat: 38.43611,
     lng: 141.22972,
+    level: "warning",
     systemUrl: "https://www.dobokusougou.pref.miyagi.jp/miyagi/servlet/Gamen22Servlet?param=common=dispDate:null$duration:60$timeNumber:24$pageGroup:%E7%9F%B3%E5%B7%BB%E5%9C%B0%E5%9F%9F$page:1$itemPageGroup:1H$itemPage:1$stationNo:104004066$kioDispDate:null$kioPattern:1$dispEventNumber:1$station2No:0$autoType:false$riverName:null$mapClassSwich:0$lScaleMax:0$lScaleMin:0$rScaleMax:0$rScaleMin:0$lScaleMax2:0$lScaleMin2:0$rScaleMax2:0$rScaleMin2:0$ShiftWidth:0$anypage:0$freeStr:null$freeNo:1",
     operator: "宮城県"
   },
