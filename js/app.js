@@ -1152,7 +1152,7 @@
       const customIcon = L.divIcon({
         className: 'custom-marker',
         html: `<div class="marker-wrapper">
-                 <div class="marker-icon water-level-marker-icon" style="background-color: ${levelColor};" title="${station.name}">
+                 <div class="marker-icon water-level-marker-icon" style="background: ${levelColor} !important; box-shadow: 0 0 12px ${levelColor};" title="${station.name}">
                    <i class="fa-solid fa-droplet" style="color: white; font-size: 10px;"></i>
                  </div>
                </div>`,
