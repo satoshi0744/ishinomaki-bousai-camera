@@ -365,6 +365,9 @@
         renderSidebarList(); // サイドバーの再描画（アコーディオン状態反映）
       }
     }
+
+    // 選択されたエリアに連動して気象警報バーも更新
+    fetchWeatherAlerts(area);
   }
 
   // ■ すべてのフィルター（カテゴリー、管理者、エリア、検索）を地図マーカーに適用
@@ -1188,21 +1191,61 @@
     });
   }
 
-  // ■ 気象庁防災情報データ（040000.json）から気象警報・注意報を取得・描画する関数
-  async function fetchWeatherAlerts() {
+  // ■ 気象庁防災情報データ（040000.json）から気象警報・注意報を取得・描画する関数（エリア連動）
+  async function fetchWeatherAlerts(activeArea = state.activeAreaFilter || 'ishinomaki') {
     const alertBar = document.getElementById('weather-alert-bar');
     if (!alertBar) return;
+
+    // エリアごとの対象市町村定義
+    const AREA_CITIES = {
+      'ishinomaki': [
+        { code: '0420200', name: '石巻市' },
+        { code: '0421100', name: '東松島市' },
+        { code: '0458100', name: '女川町' }
+      ],
+      'sendai': [
+        { code: '0410000', name: '仙台市' },
+        { code: '0420300', name: '塩竈市' },
+        { code: '0420700', name: '名取市' },
+        { code: '0420900', name: '多賀城市' },
+        { code: '0421000', name: '岩沼市' },
+        { code: '0421600', name: '富谷市' }
+      ],
+      'osaki': [
+        { code: '0421500', name: '大崎市' },
+        { code: '0444500', name: '加美町' },
+        { code: '0450500', name: '美里町' }
+      ],
+      'kurihara': [
+        { code: '0421300', name: '栗原市' }
+      ],
+      'tome': [
+        { code: '0421200', name: '登米市' }
+      ],
+      'kesennuma': [
+        { code: '0420500', name: '気仙沼市' },
+        { code: '0460600', name: '南三陸町' }
+      ],
+      'sennan': [
+        { code: '0420600', name: '白石市' },
+        { code: '0420800', name: '角田市' },
+        { code: '0432100', name: '大河原町' }
+      ],
+      'all': [
+        { code: '0420200', name: '石巻市' },
+        { code: '0410000', name: '仙台市' },
+        { code: '0421500', name: '大崎市' },
+        { code: '0420500', name: '気仙沼市' },
+        { code: '0421200', name: '登米市' }
+      ]
+    };
+
+    const targetCities = AREA_CITIES[activeArea] || AREA_CITIES['ishinomaki'];
 
     try {
       const res = await fetch('https://www.jma.go.jp/bosai/warning/data/warning/040000.json');
       if (!res.ok) throw new Error('Failed to fetch weather warning data');
       const data = await res.json();
-
-      const targetCities = [
-        { code: '0420200', name: '石巻市' },
-        { code: '0421100', name: '東松島市' },
-        { code: '0458100', name: '女川町' }
-      ];
 
       const warningNames = {
         '02': '暴風雪警報', '03': '大雨警報', '04': '洪水警報', '05': '暴風警報', '06': '大雪警報', '07': '波浪警報', '08': '高潮警報',
@@ -1213,21 +1256,25 @@
 
       const cityAlerts = {};
 
-      if (data && data.timeSeries && data.timeSeries[0] && data.timeSeries[0].areas) {
-        const areas = data.timeSeries[0].areas;
-        areas.forEach(area => {
-          const matchedCity = targetCities.find(c => c.code === area.code);
-          if (matchedCity) {
-            const activeList = [];
-            if (area.warnings) {
-              area.warnings.forEach(w => {
-                if (w.status !== '解除' && w.status !== '発表警報・注意報はなし' && warningNames[w.code]) {
-                  const isDanger = ['02','03','04','05','06','07','08','32','33','35','36','37','38'].includes(w.code);
-                  activeList.push({ name: warningNames[w.code], isDanger });
+      // 正しい気象庁JSON構造(data.areaTypes[].areas[])をパース
+      if (data && data.areaTypes) {
+        data.areaTypes.forEach(at => {
+          if (at.areas) {
+            at.areas.forEach(area => {
+              const matchedCity = targetCities.find(c => c.code === area.code);
+              if (matchedCity) {
+                const activeList = [];
+                if (area.warnings) {
+                  area.warnings.forEach(w => {
+                    if (w.status !== '解除' && w.status !== '発表警報・注意報はなし' && warningNames[w.code]) {
+                      const isDanger = ['02','03','04','05','06','07','08','32','33','35','36','37','38'].includes(w.code);
+                      activeList.push({ name: warningNames[w.code], isDanger });
+                    }
+                  });
                 }
-              });
-            }
-            cityAlerts[matchedCity.name] = activeList;
+                cityAlerts[matchedCity.name] = activeList;
+              }
+            });
           }
         });
       }
