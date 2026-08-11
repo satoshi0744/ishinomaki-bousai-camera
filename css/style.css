@@ -1304,3 +1304,88 @@ body {
   70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
   100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
+
+/* ==========================================================================
+   危険水位観測所：常時目立つ波紋リング＆常時表示タグ（マウスホバー不要）
+   ========================================================================== */
+.water-level-marker-icon.station-danger {
+  background-color: #ef4444 !important;
+  border-color: #ffffff !important;
+  animation: station-pulse-danger 1.5s infinite !important;
+  z-index: 1000;
+}
+
+.water-level-marker-icon.station-warning {
+  background-color: #f59e0b !important;
+  border-color: #ffffff !important;
+  animation: station-pulse-warning 1.8s infinite !important;
+  z-index: 900;
+}
+
+.water-level-marker-icon.station-normal {
+  background-color: #10b981 !important;
+}
+
+@keyframes station-pulse-danger {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.9), 0 0 8px #ef4444;
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 14px rgba(239, 68, 68, 0), 0 0 20px #ef4444;
+    transform: scale(1.25);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0), 0 0 8px #ef4444;
+    transform: scale(1);
+  }
+}
+
+@keyframes station-pulse-warning {
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.9), 0 0 8px #f59e0b;
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(245, 158, 11, 0), 0 0 18px #f59e0b;
+    transform: scale(1.2);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0), 0 0 8px #f59e0b;
+    transform: scale(1);
+  }
+}
+
+/* 常時表示の危険通知タグ（マウスを当てなくても常時表示） */
+.always-visible-alert-tag {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  pointer-events: none;
+  z-index: 1001;
+}
+
+.always-visible-alert-tag.danger-tag {
+  background: #ef4444;
+  color: #ffffff;
+  border: 1px solid #ffffff;
+  animation: tag-bounce 1.5s infinite;
+}
+
+.always-visible-alert-tag.warning-tag {
+  background: #f59e0b;
+  color: #000000;
+  border: 1px solid #ffffff;
+}
+
+@keyframes tag-bounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-3px); }
+}

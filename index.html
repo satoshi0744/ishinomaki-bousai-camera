@@ -21,7 +21,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
   <!-- スタイルシート -->
-  <link rel="stylesheet" href="css/style.css?v=20260811_1625">
+  <link rel="stylesheet" href="css/style.css?v=20260811_1833">
 </head>
 <body>
   <div class="app-container">
@@ -43,25 +43,35 @@
         </button>
       </div>
       <div class="header-right">
-        <!-- 使い方・凡例ボタン -->
-        <button id="info-btn" class="info-btn" title="使い方・凡例">
-          <i class="fa-solid fa-circle-info"></i>
-        </button>
-        <!-- エリア選択ボタン -->
-        <button id="area-select-btn" class="area-select-btn">
-          <i class="fa-solid fa-map-location-dot"></i>
-          <span id="current-area-text">全県域</span>
-        </button>
-        <!-- カウントダウンタイマー -->
-        <div class="timer-container">
-          <div class="timer-display">
-            <i class="fa-solid fa-rotate spin-on-refresh"></i>
-            <span id="timer-text">次回更新: 10:00</span>
-          </div>
-          <div class="timer-progress-bg">
-            <div class="timer-progress" id="timer-progress"></div>
-          </div>
+        <div class="area-filter-container">
+          <button class="filter-btn area-btn" id="area-filter-btn">
+            <i class="fa-solid fa-map-pin"></i>
+            <span id="current-area-text">石巻圏</span>
+            <i class="fa-solid fa-chevron-down" style="font-size: 10px; margin-left: 4px;"></i>
+          </button>
         </div>
+        <div class="header-filters">
+          <button class="filter-btn active" data-category="all">
+            <i class="fa-solid fa-layer-group"></i>
+            <span class="filter-text">すべて</span>
+          </button>
+          <button class="filter-btn" data-category="river">
+            <i class="fa-solid fa-water"></i>
+            <span class="filter-text">河川</span>
+          </button>
+          <button class="filter-btn" data-category="road">
+            <i class="fa-solid fa-road"></i>
+            <span class="filter-text">道路</span>
+          </button>
+          <button class="filter-btn" data-category="fav">
+            <i class="fa-solid fa-star"></i>
+            <span class="filter-text">お気に入り</span>
+          </button>
+        </div>
+        <button class="filter-btn" id="info-btn" title="使い方・凡例" style="margin-left: 4px;">
+          <i class="fa-solid fa-circle-info"></i>
+          <span class="filter-text">凡例</span>
+        </button>
       </div>
     </header>
 
@@ -75,118 +85,144 @@
     <!-- ========== ステータスバー ========== -->
     <div class="status-bar">
       <span class="camera-count">全 45 台</span>
-      <span class="last-update">最終更新: --:--:--</span>
-    </div>
-
-    <!-- ========== メインコンテンツ ========== -->
-    <div class="main-content" id="main-content">
-
-      <!-- 地図エリア -->
-      <div class="map-wrapper" id="map-wrapper">
-        <div id="map"></div>
-        <button class="sidebar-toggle" id="sidebar-toggle" title="カメラリストの開閉">
-          <i class="fa-solid fa-chevron-right" id="toggle-icon"></i>
+      <div class="auto-refresh-indicator">
+        <span class="pulse-dot"></span>
+        <span class="countdown-timer">10:00</span>
+        <button class="refresh-now-btn" title="手動更新">
+          <i class="fa-solid fa-rotate-right"></i>
         </button>
       </div>
+    </div>
 
-      <!-- サイドバー：カメラプレビューパネル（蛇腹アコーディオン構造） -->
+    <!-- ========== メインコンテンツエリア ========== -->
+    <div class="main-content" id="main-content">
+      
+      <!-- 地図エリア（左側 / モバイル上部） -->
+      <div class="map-container" id="map-container">
+        <div id="map"></div>
+      </div>
+
+      <!-- サイドバー（右側 / モバイル下部） -->
       <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-          <span class="sidebar-title">
-            <i class="fa-solid fa-layer-group" style="color: var(--accent);"></i> 水系・地域別リスト
-          </span>
-          <span class="sidebar-count" id="sidebar-count">0 台表示</span>
+        <!-- 検索バー -->
+        <div class="search-box">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" id="search-input" placeholder="カメラ名・設置場所で検索..." autocomplete="off">
+          <button class="clear-search-btn" id="clear-search-btn" title="クリア">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
         </div>
-        <div class="sidebar-search">
-          <div class="search-input-wrapper">
-            <i class="fa-solid fa-magnifying-glass search-icon"></i>
-            <input type="text" id="search-input" placeholder="カメラ名・場所で検索...">
-          </div>
-        </div>
-        <div class="camera-list" id="camera-list">
-          <!-- JavaScript で動的にアコーディオン生成 -->
-        </div>
-        <div class="no-results" id="no-results">
-          <i class="fa-solid fa-magnifying-glass" style="font-size: 32px; opacity: 0.4; margin-bottom: 8px;"></i>
-          <p>該当するカメラが見つかりません</p>
+
+        <!-- カメラアコーディオンリスト -->
+        <div class="accordion-container" id="camera-list">
+          <!-- JSで動的にアコーディオンを生成 -->
         </div>
       </aside>
 
-    </div><!-- /.main-content -->
-  </div><!-- /.app-container -->
+    </div>
 
-  <!-- ========== スマホ用ボトムタブバー ========== -->
-  <nav class="bottom-tab-bar" id="bottom-tab-bar">
-    <button class="tab-btn active" data-tab="map">
-      <i class="fa-solid fa-map-location-dot"></i>
-      <span>地図</span>
-    </button>
-    <button class="tab-btn" data-tab="list">
-      <i class="fa-solid fa-list-ul"></i>
-      <span>カメラ一覧</span>
-    </button>
-  </nav>
+    <!-- ========== スマホ用ボトムナビゲーション ========== -->
+    <nav class="bottom-nav" id="bottom-nav">
+      <button class="nav-item active" data-tab="map">
+        <i class="fa-solid fa-map-location-dot"></i>
+        <span>地図</span>
+      </button>
+      <button class="nav-item" data-tab="list">
+        <i class="fa-solid fa-list-ul"></i>
+        <span>一覧リスト</span>
+      </button>
+    </nav>
 
-  <!-- ========== モーダルウィンドウ ========== -->
+  </div>
+
+  <!-- エリア選択ダイアログ -->
+  <div class="modal-overlay" id="area-modal-overlay">
+    <div class="area-modal-content">
+      <div class="area-modal-header">
+        <h3><i class="fa-solid fa-map-location-dot"></i> 表示エリアの選択</h3>
+        <button class="modal-close" id="area-modal-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="area-options-grid">
+        <button class="area-option-btn active" data-area="ishinomaki">
+          <strong>石巻圏</strong>
+          <span>石巻市・東松島市・女川町</span>
+        </button>
+        <button class="area-option-btn" data-area="sendai">
+          <strong>仙台圏</strong>
+          <span>仙台市・塩竈市・名取市・多賀城市等</span>
+        </button>
+        <button class="area-option-btn" data-area="osaki">
+          <strong>大崎圏</strong>
+          <span>大崎市・加美町・美里町等</span>
+        </button>
+        <button class="area-option-btn" data-area="kurihara">
+          <strong>栗原圏</strong>
+          <span>栗原市全域</span>
+        </button>
+        <button class="area-option-btn" data-area="tome">
+          <strong>登米圏</strong>
+          <span>登米市全域</span>
+        </button>
+        <button class="area-option-btn" data-area="kesennuma">
+          <strong>気仙沼圏</strong>
+          <span>気仙沼市・南三陸町</span>
+        </button>
+        <button class="area-option-btn" data-area="sennan">
+          <strong>仙南圏</strong>
+          <span>白石市・角田市・大河原町等</span>
+        </button>
+        <button class="area-option-btn" data-area="all" style="grid-column: 1 / -1; background: rgba(255,255,255,0.05);">
+          <strong>全域を表示</strong>
+          <span>宮城県全域の全観測所</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- モーダル（画像・配信拡大表示用） -->
   <div class="modal-overlay" id="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 class="modal-title" id="modal-title">カメラ名</h2>
-        <button class="modal-close" id="modal-close" aria-label="閉じる">
+        <div class="modal-title-area">
+          <h2 class="modal-title" id="modal-title">カメラ名</h2>
+          <div class="modal-badges" id="modal-badges"></div>
+        </div>
+        <button class="modal-close" id="modal-close" title="閉じる">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
+
       <div class="modal-body">
-        <div class="modal-image" id="modal-image">
-          <!-- 画像またはプレースホルダー -->
+        <div class="modal-media-wrapper" id="modal-media-wrapper">
+          <!-- JSで動的に画像またはYouTube/ストリーム要素を生成 -->
         </div>
+
         <div class="modal-details" id="modal-details">
-          <!-- 詳細情報 -->
+          <!-- 詳細情報（管理者、撮影方向など） -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <div style="font-size: 11px; color: var(--text-muted);" id="modal-time-info">
+          <!-- 更新時刻 -->
         </div>
         <div class="modal-actions" id="modal-actions">
-          <!-- 配信元リンクボタン -->
+          <!-- 外部サイトリンクボタンなど -->
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ========== エリア選択モーダル ========== -->
-  <div class="modal-overlay" id="area-modal-overlay">
-    <div class="modal-content area-modal-content">
-      <div class="modal-header">
-        <h2 class="modal-title"><i class="fa-solid fa-map-location-dot"></i> 管内（エリア）選択</h2>
-        <button class="modal-close" id="area-modal-close" aria-label="閉じる">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-      <div class="modal-body area-modal-body">
-        <p style="margin-bottom: 12px; font-size: 12px; color: var(--text-secondary);">監視したいエリアを選択してください。処理が軽くなります。</p>
-        <div class="area-options">
-          <button class="area-option-btn active" data-area="all">全県域</button>
-          <button class="area-option-btn" data-area="sennan">仙南圏</button>
-          <button class="area-option-btn" data-area="sendai">仙台圏</button>
-          <button class="area-option-btn" data-area="osaki">大崎圏</button>
-          <button class="area-option-btn" data-area="kurihara">栗原圏</button>
-          <button class="area-option-btn" data-area="tome">登米圏</button>
-          <button class="area-option-btn" data-area="ishinomaki">石巻圏</button>
-          <button class="area-option-btn" data-area="kesennuma">気仙沼圏</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ========== 使い方・凡例モーダル ========== -->
+  <!-- 使い方・凡例モーダル -->
   <div class="modal-overlay" id="info-modal-overlay">
-    <div class="modal-content area-modal-content" style="max-width: 500px;">
-      <div class="modal-header">
-        <h2 class="modal-title"><i class="fa-solid fa-circle-info"></i> 凡例・使い方</h2>
-        <button class="modal-close" id="info-modal-close" aria-label="閉じる">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
+    <div class="info-modal-content" style="background: var(--bg-card); color: var(--text-primary); padding: 20px; border-radius: 12px; max-width: 480px; width: 90%; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h2 style="font-size: 16px; font-weight: bold; margin: 0; color: var(--accent);"><i class="fa-solid fa-circle-info"></i> 使い方とアイコン凡例</h2>
+        <button id="info-modal-close" style="background: none; border: none; color: var(--text-secondary); font-size: 18px; cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <div class="modal-body area-modal-body" style="font-size: 13px; line-height: 1.6;">
-        <h3 style="margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px;">■ アイコンの凡例</h3>
-        <ul style="list-style: none; padding-left: 0; margin-bottom: 16px;">
+      <div style="font-size: 12px; line-height: 1.6;">
+        <h3 style="margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px;">■ カメラ・観測所アイコンの種類</h3>
+        <ul style="list-style: none; padding: 0; margin-bottom: 16px;">
           <li style="margin-bottom: 4px;"><span class="filter-dot" style="background: var(--river); display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:6px;"></span>河川カメラ</li>
           <li style="margin-bottom: 4px;"><span class="filter-dot" style="background: var(--road); display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:6px;"></span>道路カメラ</li>
           <li style="margin-bottom: 4px;"><span class="filter-dot" style="background: #38bdf8; display:inline-block; width:12px; height:12px; border-radius:50%; border:2px solid #fff; margin-right:6px;"></span>水位観測所</li>
@@ -207,11 +243,11 @@
     });
   </script>
   <!-- カメラ・水位観測所データ -->
-  <script src="js/water_level_stations.js?v=20260811_1825"></script>
-  <script src="js/cameras.js?v=20260811_1625"></script>
+  <script src="js/water_level_stations.js?v=20260811_1833"></script>
+  <script src="js/cameras.js?v=20260811_1833"></script>
   <!-- メインアプリケーション -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="js/app.js?v=20260811_1830"></script>
+  <script src="js/app.js?v=20260811_1833"></script>
 
 </body>
 </html>
