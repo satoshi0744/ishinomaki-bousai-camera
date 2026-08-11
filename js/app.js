@@ -1192,7 +1192,8 @@
   }
 
   // ■ 気象庁防災情報データ（040000.json）から気象警報・注意報を取得・描画する関数（エリア連動）
-  async function fetchWeatherAlerts(activeArea = state.activeAreaFilter || 'ishinomaki') {
+  async function fetchWeatherAlerts(activeArea) {
+    if (!activeArea) activeArea = state.activeAreaFilter || 'ishinomaki';
     const alertBar = document.getElementById('weather-alert-bar');
     if (!alertBar) return;
 
@@ -1245,8 +1246,10 @@
     const targetCities = AREA_CITIES[activeArea] || AREA_CITIES['ishinomaki'];
 
     try {
-      const res = await fetch('https://www.jma.go.jp/bosai/warning/data/warning/040000.json');
-      if (!res.ok) throw new Error('Failed to fetch weather warning data');
+      const res = await fetch('https://www.jma.go.jp/bosai/warning/data/warning/040000.json', {
+        cache: 'no-cache'
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
 
       const warningNames = {
@@ -1258,30 +1261,29 @@
 
       const cityAlerts = {};
 
-      // 正しい気象庁JSON構造(data.areaTypes[].areas[])をパース
-      if (data && data.areaTypes) {
-        data.areaTypes.forEach(at => {
-          if (at.areas) {
-            at.areas.forEach(area => {
-              const matchedCity = targetCities.find(c => c.code === area.code);
-              if (matchedCity) {
-                const activeList = [];
-                if (area.warnings) {
-                  area.warnings.forEach(w => {
-                    if (w.status !== '解除' && w.status !== '発表警報・注意報はなし' && warningNames[w.code]) {
-                      const isDanger = ['02','03','04','05','06','07','08','32','33','35','36','37','38'].includes(w.code);
-                      activeList.push({ name: warningNames[w.code], isDanger });
-                    }
-                  });
+      // 気象庁JSON: data.areaTypes[].areas[] をパース
+      if (data && data.areaTypes && Array.isArray(data.areaTypes)) {
+        for (const at of data.areaTypes) {
+          if (!at.areas || !Array.isArray(at.areas)) continue;
+          for (const area of at.areas) {
+            const matchedCity = targetCities.find(c => c.code === area.code);
+            if (!matchedCity) continue;
+            const activeList = [];
+            if (area.warnings && Array.isArray(area.warnings)) {
+              for (const w of area.warnings) {
+                if (w.status === '解除') continue;
+                if (warningNames[w.code]) {
+                  const isDanger = ['02','03','04','05','06','07','08','32','33','35','36','37','38'].includes(w.code);
+                  activeList.push({ name: warningNames[w.code], isDanger });
                 }
-                cityAlerts[matchedCity.name] = activeList;
               }
-            });
+            }
+            cityAlerts[matchedCity.name] = activeList;
           }
-        });
+        }
       }
 
-      let html = '<div style="font-weight: bold; color: var(--accent); margin-right: 8px; display: flex; align-items: center; gap: 6px;"><i class="fa-solid fa-cloud-bolt"></i> 警報・注意報:</div>';
+      let html = '<div style="font-weight: bold; color: var(--accent); margin-right: 8px; display: flex; align-items: center; gap: 6px; flex-shrink: 0;"><i class="fa-solid fa-cloud-bolt"></i> 警報・注意報:</div>';
 
       targetCities.forEach(city => {
         const alerts = cityAlerts[city.name] || [];
@@ -1300,8 +1302,13 @@
 
       alertBar.innerHTML = html;
     } catch (err) {
-      console.warn('Weather alerts error:', err);
-      alertBar.innerHTML = `<div class="weather-alert-loading" style="color: #9ca3af;"><i class="fa-solid fa-circle-info"></i> 気象警報情報（自動取得）</div>`;
+      console.warn('気象警報取得エラー:', err);
+      // エラー時もバーを見やすく更新（読み込み中で止まらないようにする）
+      alertBar.innerHTML = `<div style="display: flex; align-items: center; gap: 8px; color: #94a3b8; font-size: 12px;">
+        <i class="fa-solid fa-cloud-bolt"></i>
+        <span>気象警報: 気象庁データの取得に失敗しました。</span>
+        <a href="https://www.jma.go.jp/bosai/warning/#area_type=1&area_code=040000" target="_blank" rel="noopener" style="color: var(--accent); text-decoration: underline;">気象庁で確認</a>
+      </div>`;
     }
   }
 
