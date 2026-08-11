@@ -12,7 +12,7 @@
     REFRESH_INTERVAL: 10 * 60 * 1000, // 10分
     CATEGORY_COLORS: {
       river: '#3b82f6',
-      road: '#f59e0b',
+      road: '#0284c7', // 警戒色(黄色・赤)と被らない視認性の高い水色/ターコイズ
       coast: '#06b6d4',
       city: '#10b981',
       other: '#a78bfa'
@@ -121,6 +121,7 @@
     initSearch();
     initModal();
     initInfoModal();
+    fetchWeatherAlerts(); // 気象警報・注意報データのリアルタイム取得
     startAutoRefresh();
     updateStatusBar();
 
@@ -1127,10 +1128,28 @@
     if (typeof WATER_LEVEL_STATIONS === 'undefined' || !state.layers['water_level']) return;
 
     WATER_LEVEL_STATIONS.forEach(station => {
+      // 警戒レベル・水防水位に応じた動的カラー判定
+      let levelColor = '#10b981'; // デフォルト: 正常(緑)
+      let levelText = '平常水位 (正常)';
+      let levelBadgeClass = 'warning-none';
+
+      if (station.level === 'danger' || station.status === 'danger') {
+        levelColor = '#ef4444'; // 氾濫危険・避難判断 (赤)
+        levelText = '氾濫危険水位超過 (レベル3〜4相当)';
+        levelBadgeClass = 'warning-danger';
+      } else if (station.level === 'warning' || station.status === 'warning') {
+        levelColor = '#f59e0b'; // 氾濫注意 (黄)
+        levelText = '氾濫注意水位超過 (レベル2相当)';
+        levelBadgeClass = 'warning-caution';
+      } else if (station.status === 'maintenance' || station.status === 'inactive') {
+        levelColor = '#9ca3af'; // 欠測・調整中 (灰)
+        levelText = 'データ調整中';
+      }
+
       const customIcon = L.divIcon({
         className: 'custom-marker',
         html: `<div class="marker-wrapper">
-                 <div class="marker-icon water-level-marker-icon" title="${station.name}">
+                 <div class="marker-icon water-level-marker-icon" style="background-color: ${levelColor};" title="${station.name}">
                    <i class="fa-solid fa-droplet" style="color: white; font-size: 10px;"></i>
                  </div>
                </div>`,
@@ -1142,9 +1161,10 @@
 
       const popupContent = `
         <div class="hover-popup">
-          <div class="hover-popup-title" style="color: #10b981;">💧 ${station.name}</div>
+          <div class="hover-popup-title" style="color: ${levelColor};">💧 ${station.name}</div>
           <div style="font-size: 11px; color: var(--text-secondary); margin: 4px 0;">${station.riverName}</div>
-          <div class="hover-popup-hint" style="color: #10b981;"><i class="fa-solid fa-chart-line"></i> クリックで断面図・リアルタイム水位・予測を表示</div>
+          <div style="margin: 4px 0;"><span class="weather-badge ${levelBadgeClass}">${levelText}</span></div>
+          <div class="hover-popup-hint" style="color: ${levelColor};"><i class="fa-solid fa-chart-line"></i> クリックで断面図・リアルタイム水位・予測を表示</div>
         </div>
       `;
       marker.bindPopup(popupContent, { closeButton: false, offset: [0, -10] });
@@ -1159,13 +1179,81 @@
         marker.closePopup();
       });
 
-      // ピン直接クリック時：添付画像の画面がそのままモーダル内に開く（方法1：リアルタイム画面埋め込み）
+      // ピン直接クリック時：添付画像の画面がそのままモーダル内に開く
       marker.on('click', () => {
         openWaterLevelModal(station);
       });
 
       state.layers['water_level'].addLayer(marker);
     });
+  }
+
+  // ■ 気象庁防災情報データ（040000.json）から気象警報・注意報を取得・描画する関数
+  async function fetchWeatherAlerts() {
+    const alertBar = document.getElementById('weather-alert-bar');
+    if (!alertBar) return;
+
+    try {
+      const res = await fetch('https://www.jma.go.jp/bosai/warning/data/warning/040000.json');
+      if (!res.ok) throw new Error('Failed to fetch weather warning data');
+      const data = await res.json();
+
+      const targetCities = [
+        { code: '0420200', name: '石巻市' },
+        { code: '0421100', name: '東松島市' },
+        { code: '0458100', name: '女川町' }
+      ];
+
+      const warningNames = {
+        '02': '暴風雪警報', '03': '大雨警報', '04': '洪水警報', '05': '暴風警報', '06': '大雪警報', '07': '波浪警報', '08': '高潮警報',
+        '10': '大雨注意報', '12': '洪水注意報', '13': '風雪注意報', '14': '強風注意報', '15': '大雪注意報', '16': '波浪注意報', '17': '高潮注意報',
+        '18': '融雪注意報', '19': '濃霧注意報', '20': '雷注意報', '21': '乾燥注意報', '22': '濃霧注意報', '23': '低温注意報',
+        '32': '暴風雪特別警報', '33': '大雨特別警報', '35': '暴風特別警報', '36': '大雪特別警報', '37': '波浪特別警報', '38': '高潮特別警報'
+      };
+
+      const cityAlerts = {};
+
+      if (data && data.timeSeries && data.timeSeries[0] && data.timeSeries[0].areas) {
+        const areas = data.timeSeries[0].areas;
+        areas.forEach(area => {
+          const matchedCity = targetCities.find(c => c.code === area.code);
+          if (matchedCity) {
+            const activeList = [];
+            if (area.warnings) {
+              area.warnings.forEach(w => {
+                if (w.status !== '解除' && w.status !== '発表警報・注意報はなし' && warningNames[w.code]) {
+                  const isDanger = ['02','03','04','05','06','07','08','32','33','35','36','37','38'].includes(w.code);
+                  activeList.push({ name: warningNames[w.code], isDanger });
+                }
+              });
+            }
+            cityAlerts[matchedCity.name] = activeList;
+          }
+        });
+      }
+
+      let html = '<div style="font-weight: bold; color: var(--accent); margin-right: 8px; display: flex; align-items: center; gap: 6px;"><i class="fa-solid fa-cloud-bolt"></i> 警報・注意報:</div>';
+
+      targetCities.forEach(city => {
+        const alerts = cityAlerts[city.name] || [];
+        html += `<div class="weather-item">
+          <span class="weather-area-name">${city.name}</span>`;
+        if (alerts.length === 0) {
+          html += `<span class="weather-badge warning-none">なし</span>`;
+        } else {
+          alerts.forEach(a => {
+            const badgeClass = a.isDanger ? 'warning-danger' : 'warning-caution';
+            html += `<span class="weather-badge ${badgeClass}">${a.name}</span>`;
+          });
+        }
+        html += `</div>`;
+      });
+
+      alertBar.innerHTML = html;
+    } catch (err) {
+      console.warn('Weather alerts error:', err);
+      alertBar.innerHTML = `<div class="weather-alert-loading" style="color: #9ca3af;"><i class="fa-solid fa-circle-info"></i> 気象警報情報（自動取得）</div>`;
+    }
   }
 
   // ■ 水位観測所 大画面モーダル表示（特定局のリアルタイム水位経過表・断面図に直リンク）
