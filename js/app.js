@@ -530,19 +530,27 @@
           </button>
         </div>
       `;
+      // 初期化時に1度だけTooltipをバインド（DOM要素を解体・破壊しない）
+      const tooltip = L.tooltip({
+        direction: 'top',
+        interactive: true,
+        className: 'custom-smart-tooltip',
+        offset: [0, -10]
+      }).setContent(popupContent);
+      marker.bindTooltip(tooltip);
+
       // ポップアップを開く際、画面の余白に応じて方向（top/bottom/left/right/斜め）を動的に設定して開く
       const openSmartTooltip = () => {
         if (!state.map) return;
         const config = calculateSmartDirectionAndOffset(marker);
 
-        // 既存のTooltipを解除して再設定
-        marker.unbindTooltip();
-        marker.bindTooltip(popupContent, {
-          direction: config.direction,
-          interactive: true,
-          className: 'custom-smart-tooltip',
-          offset: config.offset
-        }).openTooltip();
+        // DOM解体を行わず、内部オプションのみを安全に直接書き換えて開く
+        const currentTooltip = marker.getTooltip();
+        if (currentTooltip) {
+          currentTooltip.options.direction = config.direction;
+          currentTooltip.options.offset = config.offset;
+        }
+        marker.openTooltip();
       };
 
       // サイドバーのスクロール連動関数
@@ -1188,18 +1196,26 @@
         </div>
       `;
 
+      // 水位観測所初期化時に1度だけTooltipをバインド
+      const waterTooltip = L.tooltip({
+        direction: 'top',
+        interactive: true,
+        className: 'custom-smart-tooltip',
+        offset: [0, -10]
+      }).setContent(popupContent);
+      marker.bindTooltip(waterTooltip);
+
       // 水位観測所スマートツールチップ位置自動調整関数
       const openSmartWaterTooltip = () => {
         if (!state.map) return;
         const config = calculateSmartDirectionAndOffset(marker);
 
-        marker.unbindTooltip();
-        marker.bindTooltip(popupContent, {
-          direction: config.direction,
-          interactive: true,
-          className: 'custom-smart-tooltip',
-          offset: config.offset
-        }).openTooltip();
+        const currentTooltip = marker.getTooltip();
+        if (currentTooltip) {
+          currentTooltip.options.direction = config.direction;
+          currentTooltip.options.offset = config.offset;
+        }
+        marker.openTooltip();
       };
 
       // スマホ対応：タップで開く
