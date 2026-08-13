@@ -1530,5 +1530,48 @@
     });
   }
 
+  // ■ 画面上のピン位置から最適方向（top/bottom/left/right/四隅斜め）とオフセットを計算する全方向判定関数
+  function calculateSmartDirectionAndOffset(marker) {
+    if (!state.map || !marker) return { direction: 'top', offset: [0, -10] };
+    const pt = state.map.latLngToContainerPoint(marker.getLatLng());
+    const mapSize = state.map.getSize();
+
+    const isTop = pt.y < 350;
+    const isBottom = pt.y > mapSize.y - 250;
+    const isLeft = pt.x < 220;
+    const isRight = pt.x > mapSize.x - 220;
+
+    // 四隅の斜め判定
+    if (isTop && isLeft) {
+      return { direction: 'right', offset: [15, 20] }; // 左上角 -> 右下斜め
+    }
+    if (isTop && isRight) {
+      return { direction: 'left', offset: [-15, 20] }; // 右上角 -> 左下斜め
+    }
+    if (isBottom && isLeft) {
+      return { direction: 'right', offset: [15, -20] }; // 左下角 -> 右上斜め
+    }
+    if (isBottom && isRight) {
+      return { direction: 'left', offset: [-15, -20] }; // 右下角 -> 左上斜め
+    }
+
+    // 上下左右の単体判定
+    if (isTop) {
+      return { direction: 'bottom', offset: [0, 20] }; // 上端 -> 下向き
+    }
+    if (isBottom) {
+      return { direction: 'top', offset: [0, -10] }; // 下端 -> 上向き
+    }
+    if (isLeft) {
+      return { direction: 'right', offset: [15, 0] }; // 左端 -> 右向き
+    }
+    if (isRight) {
+      return { direction: 'left', offset: [-15, 0] }; // 右端 -> 左向き
+    }
+
+    // デフォルト（中央部）
+    return { direction: 'top', offset: [0, -10] };
+  }
+
 
 })();
