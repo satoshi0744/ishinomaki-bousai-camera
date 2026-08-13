@@ -121,6 +121,7 @@
     initSearch();
     initModal();
     initInfoModal();
+    initTimerTooltip(); // タイマー注記ツールチップの初期化
     fetchWeatherAlerts(); // 気象警報・注意報データのリアルタイム取得
     startAutoRefresh();
     updateStatusBar();
@@ -522,6 +523,7 @@
       const popupContent = `
         <div class="hover-popup" style="pointer-events: auto;">
           <div class="hover-popup-title">${camera.name}</div>
+          <div style="font-size: 10px; color: var(--accent); margin-bottom: 4px;"><i class="fa-solid fa-camera"></i> 選択時点の最新画像を表示中</div>
           ${popupImgHtml}
           <button style="width: 100%; padding: 6px; background: #374151; color: white; border: none; border-radius: 4px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;" onclick="document.dispatchEvent(new CustomEvent('open-camera-modal', {detail: '${camera.id}'}))">
             <i class="fa-solid fa-expand"></i> 詳細・大画面
@@ -1020,7 +1022,13 @@
             </a>
           </div>`;
       } else if (camera.imageUrl) {
-        imageArea.innerHTML = `<img src="${camera.imageUrl}" alt="${camera.name}">`;
+        imageArea.innerHTML = `
+          <div style="position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center;">
+            <div style="font-size: 11px; color: var(--accent); background: rgba(15, 23, 42, 0.8); padding: 4px 8px; border-radius: 4px; margin-bottom: 6px; border: 1px solid var(--border);">
+              <i class="fa-solid fa-camera"></i> ピン選択時点の配信元最新画像を表示しています
+            </div>
+            <img src="${camera.imageUrl}" alt="${camera.name}" style="max-height: calc(100% - 28px);">
+          </div>`;
       } else {
         imageArea.innerHTML = `
           <div class="modal-placeholder">
@@ -1419,6 +1427,41 @@
     
     modal.addEventListener('click', (e) => {
       if (e.target === modal) modal.classList.remove('active');
+    });
+  }
+
+  // ■ タイマー注記ツールチップの初期化
+  function initTimerTooltip() {
+    const icon = document.getElementById('timer-info-icon');
+    const tooltip = document.getElementById('timer-tooltip-popup');
+
+    if (!icon || !tooltip) return;
+
+    let isTooltipActive = false;
+
+    // ホバー時
+    icon.addEventListener('mouseenter', () => {
+      tooltip.classList.add('active');
+    });
+
+    icon.addEventListener('mouseleave', () => {
+      if (!isTooltipActive) tooltip.classList.remove('active');
+    });
+
+    // クリック/タップ時（スマホ対応）
+    icon.addEventListener('click', (e) => {
+      e.stopPropagation();
+      isTooltipActive = !isTooltipActive;
+      if (isTooltipActive) {
+        tooltip.classList.add('active');
+      } else {
+        tooltip.classList.remove('active');
+      }
+    });
+
+    document.addEventListener('click', () => {
+      isTooltipActive = false;
+      tooltip.classList.remove('active');
     });
   }
 

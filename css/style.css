@@ -120,6 +120,7 @@ body {
   flex-direction: column;
   align-items: flex-end;
   gap: 2px;
+  position: relative;
 }
 
 .timer-display {
@@ -129,6 +130,46 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.timer-info-icon {
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 13px;
+  transition: color 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+}
+
+.timer-info-icon:hover {
+  color: var(--accent);
+}
+
+.timer-tooltip-popup {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  width: 280px;
+  background: #1e293b;
+  border: 1px solid var(--border-highlight);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.timer-tooltip-popup.active {
+  display: block;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .timer-progress-bg {
