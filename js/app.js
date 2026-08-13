@@ -530,31 +530,23 @@
           </button>
         </div>
       `;
-      const popup = L.popup({
-        closeButton: true,
-        autoPan: false, // 地図が勝手に動くのを防ぐ
-        className: 'custom-smart-popup'
-      }).setContent(popupContent);
-      marker.bindPopup(popup);
-
-      // ポップアップを開く際、画面の余白に応じて位置（オフセット）を自動調整する関数
-      const openSmartPopup = () => {
+      // ポップアップを開く際、画面の余白に応じて方向（top/bottom）を動的に設定して開く
+      const openSmartTooltip = () => {
         if (!state.map) return;
         const pt = state.map.latLngToContainerPoint(marker.getLatLng());
-        const mapSize = state.map.getSize();
         
-        let offsetX = 0;
-        let offsetY = -28; // デフォルトは上方向（ピンの上に重ならないよう離隔拡大）
+        // 画面上部から350px未満の場合は下向き、それ以外は上向きに強制
+        const direction = pt.y < 350 ? 'bottom' : 'top';
+        const offset = direction === 'bottom' ? [0, 20] : [0, -10];
 
-        // 上部に余白がない（約350px以下）場合は下方向に表示
-        if (pt.y < 350) offsetY = 48; // ピンの足元からしっかり下へ離す
-        // 左に余白がない場合は右にずらす
-        if (pt.x < 150) offsetX = 100;
-        // 右に余白がない場合は左にずらす
-        if (pt.x > mapSize.x - 150) offsetX = -100;
-        
-        popup.options.offset = [offsetX, offsetY];
-        marker.openPopup();
+        // 既存のTooltipを解除して再設定
+        marker.unbindTooltip();
+        marker.bindTooltip(popupContent, {
+          direction: direction,
+          interactive: true,
+          className: 'custom-smart-tooltip',
+          offset: offset
+        }).openTooltip();
       };
 
       // サイドバーのスクロール連動関数
@@ -592,44 +584,44 @@
         }, 150); // アコーディオンのCSSトランジションにある程度合わせる
       };
 
-      let popupHoverTimeout = null;
+      let tooltipHoverTimeout = null;
 
-      // スマホ対応：タップ時にスマートポップアップを開く
+      // スマホ対応：タップ時にスマートツールチップを開く
       marker.on('click', () => {
-        openSmartPopup();
+        openSmartTooltip();
         syncSidebarScroll();
       });
 
       // マーカーにマウスを乗せた時（PC用）
       marker.on('mouseover', () => {
-        if (popupHoverTimeout) {
-          clearTimeout(popupHoverTimeout);
-          popupHoverTimeout = null;
+        if (tooltipHoverTimeout) {
+          clearTimeout(tooltipHoverTimeout);
+          tooltipHoverTimeout = null;
         }
-        openSmartPopup();
+        openSmartTooltip();
         syncSidebarScroll();
       });
 
       // マーカーからマウスを外した時（少し遅延させて消す）
       marker.on('mouseout', () => {
-        popupHoverTimeout = setTimeout(() => {
-          marker.closePopup();
+        tooltipHoverTimeout = setTimeout(() => {
+          marker.closeTooltip();
         }, 250);
       });
 
-      // ポップアップ自体にマウスが乗っている間は消さず、外れたら消す
-      popup.on('add', () => {
-        const popupEl = popup.getElement();
-        if (popupEl) {
-          popupEl.addEventListener('mouseenter', () => {
-            if (popupHoverTimeout) {
-              clearTimeout(popupHoverTimeout);
-              popupHoverTimeout = null;
+      // ツールチップ自体にマウスが乗っている間は消さず、外れたら消す
+      marker.on('tooltipopen', () => {
+        const tooltipEl = marker.getTooltip() && marker.getTooltip().getElement();
+        if (tooltipEl) {
+          tooltipEl.addEventListener('mouseenter', () => {
+            if (tooltipHoverTimeout) {
+              clearTimeout(tooltipHoverTimeout);
+              tooltipHoverTimeout = null;
             }
           });
-          popupEl.addEventListener('mouseleave', () => {
-            popupHoverTimeout = setTimeout(() => {
-              marker.closePopup();
+          tooltipEl.addEventListener('mouseleave', () => {
+            tooltipHoverTimeout = setTimeout(() => {
+              marker.closeTooltip();
             }, 250);
           });
         }
@@ -1200,41 +1192,35 @@
         </div>
       `;
 
-      const popup = L.popup({
-        closeButton: false,
-        autoPan: false, // 地図が勝手に動くのを防ぐ（カメラピンと挙動を統一）
-        className: 'custom-smart-popup'
-      }).setContent(popupContent);
-      marker.bindPopup(popup);
-
-      // 水位観測所スマートポップアップ位置自動調整関数
-      const openSmartWaterPopup = () => {
+      // 水位観測所スマートツールチップ位置自動調整関数
+      const openSmartWaterTooltip = () => {
         if (!state.map) return;
         const pt = state.map.latLngToContainerPoint(marker.getLatLng());
-        const mapSize = state.map.getSize();
-        
-        let offsetX = 0;
-        let offsetY = -15;
+        const direction = pt.y < 350 ? 'bottom' : 'top';
+        const offset = direction === 'bottom' ? [0, 20] : [0, -10];
 
-        // 上部に余白がない（約350px以下）場合は下方向に表示
-        if (pt.y < 350) offsetY = 48;
-        // 左に余白がない場合は右にずらす
-        if (pt.x < 150) offsetX = 100;
-        // 右に余白がない場合は左にずらす
-        if (pt.x > mapSize.x - 150) offsetX = -100;
-        
-        popup.options.offset = [offsetX, offsetY];
-        marker.openPopup();
+        marker.unbindTooltip();
+        marker.bindTooltip(popupContent, {
+          direction: direction,
+          interactive: true,
+          className: 'custom-smart-tooltip',
+          offset: offset
+        }).openTooltip();
       };
 
-      // ピンホバー時：スマート位置調整でポップアップを開く
-      marker.on('mouseover', () => {
-        openSmartWaterPopup();
+      // スマホ対応：タップで開く
+      marker.on('click', () => {
+        openSmartWaterTooltip();
       });
 
-      // ピン離脱時：小ポップアップを閉じる
+      // ホバーで開く
+      marker.on('mouseover', () => {
+        openSmartWaterTooltip();
+      });
+
+      // ピン離脱時：ツールチップを閉じる
       marker.on('mouseout', () => {
-        marker.closePopup();
+        marker.closeTooltip();
       });
 
       // ピン直接クリック時：添付画像の画面がそのままモーダル内に開く
