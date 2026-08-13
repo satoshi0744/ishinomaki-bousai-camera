@@ -588,48 +588,8 @@
         }, 150); // アコーディオンのCSSトランジションにある程度合わせる
       };
 
-      let tooltipHoverTimeout = null;
-
-      // スマホ対応：タップ時にスマートツールチップを開く
-      marker.on('click', () => {
-        openSmartTooltip();
-        syncSidebarScroll();
-      });
-
-      // マーカーにマウスを乗せた時（PC用）
-      marker.on('mouseover', () => {
-        if (tooltipHoverTimeout) {
-          clearTimeout(tooltipHoverTimeout);
-          tooltipHoverTimeout = null;
-        }
-        openSmartTooltip();
-        syncSidebarScroll();
-      });
-
-      // マーカーからマウスを外した時（少し遅延させて消す）
-      marker.on('mouseout', () => {
-        tooltipHoverTimeout = setTimeout(() => {
-          marker.closeTooltip();
-        }, 250);
-      });
-
-      // ツールチップ自体にマウスが乗っている間は消さず、外れたら消す
-      marker.on('tooltipopen', () => {
-        const tooltipEl = marker.getTooltip() && marker.getTooltip().getElement();
-        if (tooltipEl) {
-          tooltipEl.addEventListener('mouseenter', () => {
-            if (tooltipHoverTimeout) {
-              clearTimeout(tooltipHoverTimeout);
-              tooltipHoverTimeout = null;
-            }
-          });
-          tooltipEl.addEventListener('mouseleave', () => {
-            tooltipHoverTimeout = setTimeout(() => {
-              marker.closeTooltip();
-            }, 250);
-          });
-        }
-      });
+      // 全マーカー共通のホバー・クリック・離脱・ホバー維持イベントをバインド
+      setupTooltipHoverEvents(marker, camera);
 
       if (state.layers[category]) {
         // 初期状態ではフィルターを適用した結果に基づいてレイヤーに追加するか決めるため、ここでは追加しない
@@ -1218,20 +1178,8 @@
         marker.openTooltip();
       };
 
-      // スマホ対応：タップで開く
-      marker.on('click', () => {
-        openSmartWaterTooltip();
-      });
-
-      // ホバーで開く
-      marker.on('mouseover', () => {
-        openSmartWaterTooltip();
-      });
-
-      // ピン離脱時：ツールチップを閉じる
-      marker.on('mouseout', () => {
-        marker.closeTooltip();
-      });
+      // 全マーカー共通のホバー・クリック・離脱・ホバー維持イベントをバインド（水位観測所にも完全適用）
+      setupTooltipHoverEvents(marker, null, true, station);
 
       // ピン直接クリック時：添付画像の画面がそのままモーダル内に開く
       marker.on('click', () => {
@@ -1487,47 +1435,99 @@
     });
   }
 
-  // ■ 画面上のピン位置から最適方向（top/bottom/left/right/四隅斜め）とオフセットを計算する全方向判定関数
-  function calculateSmartDirectionAndOffset(marker) {
-    if (!state.map || !marker) return { direction: 'top', offset: [0, -10] };
-    const pt = state.map.latLngToContainerPoint(marker.getLatLng());
-    const mapSize = state.map.getSize();
+  // ■ マーカー共通のスマートホバー・クリック・自動消去遅延バインド関数
+  function setupTooltipHoverEvents(marker, camera = null, isWater = false, station = null) {
+    let tooltipHoverTimeout = null;
 
-    const isTop = pt.y < 350;
-    const isBottom = pt.y > mapSize.y - 250;
-    const isLeft = pt.x < 220;
-    const isRight = pt.x > mapSize.x - 220;
+    // クリック・タップ時
+    marker.on('click', () => {
+      if (isWater) {
+        openWaterLevelModal(station);
+      } else if (camera) {
+        const pt = state.map.latLngToContainerPoint(marker.getLatLng());
+        const config = calculateSmartDirectionAndOffset(marker);
+        const currentTooltip = marker.getTooltip();
+        if (currentTooltip) {
+          currentTooltip.options.direction = config.direction;
+          currentTooltip.options.offset = config.offset;
+        }
+        marker.openTooltip();
+        // syncSidebarScroll();
+      }
+    });
 
-    // 四隅の斜め判定
-    if (isTop && isLeft) {
-      return { direction: 'right', offset: [15, 20] }; // 左上角 -> 右下斜め
-    }
-    if (isTop && isRight) {
-      return { direction: 'left', offset: [-15, 20] }; // 右上角 -> 左下斜め
-    }
-    if (isBottom && isLeft) {
-      return { direction: 'right', offset: [15, -20] }; // 左下角 -> 右上斜め
-    }
-    if (isBottom && isRight) {
-      return { direction: 'left', offset: [-15, -20] }; // 右下角 -> 左上斜め
-    }
+    // マウスホバー時
+    marker.on('mouseover', () => {
+      if (tooltipHoverTimeout) {
+        clearTimeout(tooltipHoverTimeout);
+        tooltipHoverTimeout = null;
+      }
+      
+      const config = calculateSmartDirectionAndOffset(marker);
+      const currentTooltip = marker.getTooltip();
+      if (currentTooltip) {
+        currentTooltip.options.direction = config.direction;
+        currentTooltip.options.offset = config.offset;
+      }
+      marker.openTooltip();
 
-    // 上下左右の単体判定
-    if (isTop) {
-      return { direction: 'bottom', offset: [0, 20] }; // 上端 -> 下向き
-    }
-    if (isBottom) {
-      return { direction: 'top', offset: [0, -10] }; // 下端 -> 上向き
-    }
-    if (isLeft) {
-      return { direction: 'right', offset: [15, 0] }; // 左端 -> 右向き
-    }
-    if (isRight) {
-      return { direction: 'left', offset: [-15, 0] }; // 右端 -> 左向き
-    }
+      if (camera && typeof syncSidebarScroll === 'function') {
+        // サイドバー連動スクロール
+        const gMeta = getGroupForCamera(camera);
+        state.accordionStates[gMeta.id] = true;
+        const groupEl = document.querySelector(`.accordion-group[data-group-id="${gMeta.id}"]`);
+        if (groupEl && !groupEl.classList.contains('open')) {
+          groupEl.classList.add('open');
+        }
+        setTimeout(() => {
+          const card = document.querySelector(`.camera-card[data-camera-id="${camera.id}"]`);
+          const listContainer = document.getElementById('camera-list');
+          if (card && listContainer) {
+            const listRect = listContainer.getBoundingClientRect();
+            const cardRect = card.getBoundingClientRect();
+            const isVisible = (cardRect.top >= listRect.top) && (cardRect.bottom <= listRect.bottom);
+            if (!isVisible) {
+              listContainer.scrollBy({
+                top: cardRect.top - listRect.top - 20,
+                behavior: 'smooth'
+              });
+            }
+            card.classList.add('card-highlight');
+            setTimeout(() => card.classList.remove('card-highlight'), 2000);
+          }
+        }, 150);
+      }
+    });
 
-    // デフォルト（中央部）
-    return { direction: 'top', offset: [0, -10] };
+    // マウス離脱時（移動猶予タイマーを600msに設定）
+    marker.on('mouseout', () => {
+      tooltipHoverTimeout = setTimeout(() => {
+        marker.closeTooltip();
+      }, 600);
+    });
+
+    // ツールチップ要素（DOM）にマウスが乗っている間は消さず維持する処理
+    marker.on('tooltipopen', () => {
+      const tooltip = marker.getTooltip();
+      if (!tooltip) return;
+      const tooltipEl = tooltip.getElement();
+      if (tooltipEl) {
+        tooltipEl.style.pointerEvents = 'auto'; // クリック・ホバーを確実に受け付ける
+
+        tooltipEl.addEventListener('mouseenter', () => {
+          if (tooltipHoverTimeout) {
+            clearTimeout(tooltipHoverTimeout);
+            tooltipHoverTimeout = null;
+          }
+        });
+
+        tooltipEl.addEventListener('mouseleave', () => {
+          tooltipHoverTimeout = setTimeout(() => {
+            marker.closeTooltip();
+          }, 600);
+        });
+      }
+    });
   }
 
 
