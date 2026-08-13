@@ -530,22 +530,18 @@
           </button>
         </div>
       `;
-      // ポップアップを開く際、画面の余白に応じて方向（top/bottom）を動的に設定して開く
+      // ポップアップを開く際、画面の余白に応じて方向（top/bottom/left/right/斜め）を動的に設定して開く
       const openSmartTooltip = () => {
         if (!state.map) return;
-        const pt = state.map.latLngToContainerPoint(marker.getLatLng());
-        
-        // 画面上部から350px未満の場合は下向き、それ以外は上向きに強制
-        const direction = pt.y < 350 ? 'bottom' : 'top';
-        const offset = direction === 'bottom' ? [0, 20] : [0, -10];
+        const config = calculateSmartDirectionAndOffset(marker);
 
         // 既存のTooltipを解除して再設定
         marker.unbindTooltip();
         marker.bindTooltip(popupContent, {
-          direction: direction,
+          direction: config.direction,
           interactive: true,
           className: 'custom-smart-tooltip',
-          offset: offset
+          offset: config.offset
         }).openTooltip();
       };
 
@@ -1195,16 +1191,14 @@
       // 水位観測所スマートツールチップ位置自動調整関数
       const openSmartWaterTooltip = () => {
         if (!state.map) return;
-        const pt = state.map.latLngToContainerPoint(marker.getLatLng());
-        const direction = pt.y < 350 ? 'bottom' : 'top';
-        const offset = direction === 'bottom' ? [0, 20] : [0, -10];
+        const config = calculateSmartDirectionAndOffset(marker);
 
         marker.unbindTooltip();
         marker.bindTooltip(popupContent, {
-          direction: direction,
+          direction: config.direction,
           interactive: true,
           className: 'custom-smart-tooltip',
-          offset: offset
+          offset: config.offset
         }).openTooltip();
       };
 
@@ -1475,6 +1469,49 @@
       isTooltipActive = false;
       tooltip.classList.remove('active');
     });
+  }
+
+  // ■ 画面上のピン位置から最適方向（top/bottom/left/right/四隅斜め）とオフセットを計算する全方向判定関数
+  function calculateSmartDirectionAndOffset(marker) {
+    if (!state.map || !marker) return { direction: 'top', offset: [0, -10] };
+    const pt = state.map.latLngToContainerPoint(marker.getLatLng());
+    const mapSize = state.map.getSize();
+
+    const isTop = pt.y < 350;
+    const isBottom = pt.y > mapSize.y - 250;
+    const isLeft = pt.x < 220;
+    const isRight = pt.x > mapSize.x - 220;
+
+    // 四隅の斜め判定
+    if (isTop && isLeft) {
+      return { direction: 'right', offset: [15, 20] }; // 左上角 -> 右下斜め
+    }
+    if (isTop && isRight) {
+      return { direction: 'left', offset: [-15, 20] }; // 右上角 -> 左下斜め
+    }
+    if (isBottom && isLeft) {
+      return { direction: 'right', offset: [15, -20] }; // 左下角 -> 右上斜め
+    }
+    if (isBottom && isRight) {
+      return { direction: 'left', offset: [-15, -20] }; // 右下角 -> 左上斜め
+    }
+
+    // 上下左右の単体判定
+    if (isTop) {
+      return { direction: 'bottom', offset: [0, 20] }; // 上端 -> 下向き
+    }
+    if (isBottom) {
+      return { direction: 'top', offset: [0, -10] }; // 下端 -> 上向き
+    }
+    if (isLeft) {
+      return { direction: 'right', offset: [15, 0] }; // 左端 -> 右向き
+    }
+    if (isRight) {
+      return { direction: 'left', offset: [-15, 0] }; // 右端 -> 左向き
+    }
+
+    // デフォルト（中央部）
+    return { direction: 'top', offset: [0, -10] };
   }
 
 
