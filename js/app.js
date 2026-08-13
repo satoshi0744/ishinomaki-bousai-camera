@@ -544,10 +544,10 @@
         const mapSize = state.map.getSize();
         
         let offsetX = 0;
-        let offsetY = -28; // ピンアイコンの上に重ならないよう離隔を拡大
+        let offsetY = -28; // デフォルトは上方向（ピンの上に重ならないよう離隔拡大）
 
-        // 上部に余白がない（約280px以下）場合は下方向に表示
-        if (pt.y < 280) offsetY = 48; // ピンの足元からしっかり下へ離す
+        // 上部に余白がない（約350px以下）場合は下方向に表示
+        if (pt.y < 350) offsetY = 48; // ピンの足元からしっかり下へ離す
         // 左に余白がない場合は右にずらす
         if (pt.x < 150) offsetX = 100;
         // 右に余白がない場合は左にずらす
@@ -1191,19 +1191,36 @@
 
       const marker = L.marker([station.lat, station.lng], { icon: customIcon });
 
-      const popupContent = `
-        <div class="hover-popup">
-          <div class="hover-popup-title" style="color: ${levelColor};">💧 ${station.name}</div>
-          <div style="font-size: 11px; color: var(--text-secondary); margin: 4px 0;">${station.riverName}</div>
-          <div style="margin: 4px 0;"><span class="weather-badge ${levelBadgeClass}">${levelText}</span></div>
-          <div class="hover-popup-hint" style="color: ${levelColor};"><i class="fa-solid fa-chart-line"></i> クリックで断面図・リアルタイム水位・予測を表示</div>
-        </div>
-      `;
-      marker.bindPopup(popupContent, { closeButton: false, offset: [0, -10] });
+      const popup = L.popup({
+        closeButton: false,
+        autoPan: false, // 地図が勝手に動くのを防ぐ（カメラピンと挙動を統一）
+        className: 'custom-smart-popup'
+      }).setContent(popupContent);
+      marker.bindPopup(popup);
 
-      // ピンホバー時：小画像ポップアップを開く
-      marker.on('mouseover', () => {
+      // 水位観測所スマートポップアップ位置自動調整関数
+      const openSmartWaterPopup = () => {
+        if (!state.map) return;
+        const pt = state.map.latLngToContainerPoint(marker.getLatLng());
+        const mapSize = state.map.getSize();
+        
+        let offsetX = 0;
+        let offsetY = -15;
+
+        // 上部に余白がない（約350px以下）場合は下方向に表示
+        if (pt.y < 350) offsetY = 48;
+        // 左に余白がない場合は右にずらす
+        if (pt.x < 150) offsetX = 100;
+        // 右に余白がない場合は左にずらす
+        if (pt.x > mapSize.x - 150) offsetX = -100;
+        
+        popup.options.offset = [offsetX, offsetY];
         marker.openPopup();
+      };
+
+      // ピンホバー時：スマート位置調整でポップアップを開く
+      marker.on('mouseover', () => {
+        openSmartWaterPopup();
       });
 
       // ピン離脱時：小ポップアップを閉じる
