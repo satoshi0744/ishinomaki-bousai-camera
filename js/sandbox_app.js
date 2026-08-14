@@ -520,7 +520,7 @@
       if (isTypeB) {
         // ① ビデオ（動画カメラ）UI
         popupImgHtml = `
-          <div style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.4); border-radius: 6px; padding: 10px 8px; text-align: center; margin: 4px 0 6px 0; cursor: pointer;" onclick="event.stopPropagation(); window.__triggerMarkerAction('${camera.id}');">
+          <div style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.4); border-radius: 6px; padding: 10px 8px; text-align: center; margin: 4px 0 6px 0;">
             <div style="font-size: 12px; color: #c4b5fd; font-weight: bold; margin-bottom: 6px; display: flex; align-items: center; justify-content: center; gap: 5px;">
               <i class="fa-solid fa-video"></i> ライブ動画配信中
             </div>
@@ -532,7 +532,7 @@
       } else if (camera.imageUrl) {
         // ② 静止画カメラ UI
         popupImgHtml = `
-          <div style="position: relative; margin-bottom: 6px; cursor: pointer;" onclick="event.stopPropagation(); window.__triggerMarkerAction('${camera.id}');">
+          <div style="position: relative; margin-bottom: 6px;">
             <img src="${camera.imageUrl}" class="hover-popup-img" alt="${camera.name}" onerror="this.src='https://via.placeholder.com/210x115/1e293b/475569?text=Camera+Preview'">
             <div style="font-size: 11px; color: #38bdf8; margin-top: 5px; text-align: center; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 4px;">
               <i class="fa-solid fa-camera"></i> タップ／クリックで詳細・拡大
@@ -1133,7 +1133,7 @@
       const marker = L.marker([station.lat, station.lng], { icon: customIcon });
 
       const popupContent = `
-        <div class="hover-popup" style="cursor: pointer;" onclick="event.stopPropagation(); window.__triggerMarkerAction('water_${station.stationNo || station.name}');">
+        <div class="hover-popup">
           <div class="hover-popup-title" style="color: ${levelColor};">💧 ${station.name}</div>
           <div style="font-size: 11px; color: var(--text-secondary); margin: 4px 0;">${station.riverName}</div>
           <div style="margin: 4px 0;"><span class="weather-badge ${levelBadgeClass}">${levelText}</span></div>
@@ -1493,6 +1493,28 @@
       }
       smartOpenTooltip();
       syncSidebar();
+    });
+
+    // ポップアップカード自体がタップ/クリックされた時も遷移を実行
+    marker.on('tooltipopen', () => {
+      const tooltip = marker.getTooltip();
+      if (!tooltip) return;
+      const tooltipEl = tooltip.getElement();
+      if (tooltipEl) {
+        L.DomEvent.disableClickPropagation(tooltipEl);
+        tooltipEl.style.cursor = 'pointer';
+
+        const handleTooltipTap = (e) => {
+          if (e) {
+            e.stopPropagation();
+            if (e.preventDefault) e.preventDefault();
+          }
+          window.__triggerMarkerAction(markerId);
+        };
+
+        tooltipEl.onclick = handleTooltipTap;
+        tooltipEl.ontouchend = handleTooltipTap;
+      }
     });
   }
 
