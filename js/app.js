@@ -111,6 +111,18 @@
 
   // ■ 初期化メイン関数
   function initApp() {
+    // ★ グローバルディスパッチャの定義 ★
+    window.__triggerMarkerAction = function(targetId) {
+      if (!targetId) return;
+      if (targetId.startsWith('water_')) {
+        const stationNo = targetId.replace('water_', '');
+        const station = WATER_LEVEL_STATIONS.find(s => (s.stationNo || s.name) === stationNo);
+        if (station) openWaterLevelModal(station);
+      } else {
+        openModal(targetId);
+      }
+    };
+
     loadFavorites();
     initMap();
     initMarkers();
@@ -1411,14 +1423,6 @@
   function setupTooltipHoverEvents(marker, camera = null, isWater = false, station = null) {
     const markerId = camera ? camera.id : (station ? 'water_' + (station.stationNo || station.name) : null);
 
-    const triggerAction = () => {
-      if (isWater && station) {
-        openWaterLevelModal(station);
-      } else if (camera) {
-        openModal(camera.id);
-      }
-    };
-
     const smartOpenTooltip = () => {
       const currentTooltip = marker.getTooltip();
       if (!currentTooltip) return;
@@ -1466,11 +1470,13 @@
 
     // クリック・タップ時の挙動（スマホ：1回目でポップアップ展開、2回目で遷移 / PC：即遷移）
     marker.on('click', (e) => {
-      if (e && e.originalEvent) e.originalEvent.stopPropagation();
+      if (e && e.originalEvent) {
+        L.DomEvent.stopPropagation(e.originalEvent);
+      }
 
       // すでにこのマーカーがアクティブ（ポップアップ表示中）だった場合 -> 2回目タップで遷移
-      if (state.activeMarkerId && state.activeMarkerId === markerId) {
-        triggerAction();
+      if (state.activeMarkerId === markerId) {
+        window.__triggerMarkerAction(markerId);
       } else {
         // 初回タップ時 -> アクティブ状態にセットし、ポップアップを開く
         state.activeMarkerId = markerId;
@@ -1481,7 +1487,10 @@
 
     // マウスホバー時（PC）
     marker.on('mouseover', () => {
-      state.activeMarkerId = markerId; // PCホバー時もアクティブにしておくことで、直後のクリックで確実に遷移
+      // スマホのタップ時に発生する疑似mouseoverによる即時遷移を防ぐため、PC環境のみアクティブ化する
+      if (!L.Browser.touch && !L.Browser.mobile) {
+        state.activeMarkerId = markerId;
+      }
       smartOpenTooltip();
       syncSidebar();
     });
@@ -1500,7 +1509,7 @@
             e.stopPropagation();
             if (e.preventDefault) e.preventDefault();
           }
-          triggerAction();
+          window.__triggerMarkerAction(markerId);
         };
 
         tooltipEl.onclick = handleTooltipTap;
