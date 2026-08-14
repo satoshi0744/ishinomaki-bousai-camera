@@ -1487,7 +1487,10 @@
 
     // マウスホバー時（PC）
     marker.on('mouseover', () => {
-      state.activeMarkerId = markerId; // PCホバー時もアクティブにしておくことで、直後のクリックで確実に遷移
+      // スマホのタップ時に発生する疑似mouseoverによる即時遷移を防ぐため、PC環境のみアクティブ化する
+      if (!L.Browser.touch && !L.Browser.mobile) {
+        state.activeMarkerId = markerId;
+      }
       smartOpenTooltip();
       syncSidebar();
     });
