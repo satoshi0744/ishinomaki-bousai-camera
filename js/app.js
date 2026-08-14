@@ -523,7 +523,7 @@
       }
 
       const popupContent = `
-        <div class="hover-popup" style="pointer-events: none;">
+        <div class="hover-popup">
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.15); padding-bottom: 5px;">
             <div style="font-weight: 700; font-size: 13px; color: #ffffff; text-align: left; line-height: 1.3;">
               ${camera.name}
@@ -546,55 +546,6 @@
         offset: [0, -10]
       }).setContent(popupContent);
       marker.bindTooltip(tooltip);
-
-      // ポップアップを開く際、画面の余白に応じて方向（top/bottom/left/right/斜め）を動的に設定して開く
-      const openSmartTooltip = () => {
-        if (!state.map) return;
-        const config = calculateSmartDirectionAndOffset(marker);
-
-        // DOM解体を行わず、内部オプションのみを安全に直接書き換えて開く
-        const currentTooltip = marker.getTooltip();
-        if (currentTooltip) {
-          currentTooltip.options.direction = config.direction;
-          currentTooltip.options.offset = config.offset;
-        }
-        marker.openTooltip();
-      };
-
-      // サイドバーのスクロール連動関数
-      const syncSidebarScroll = () => {
-        const gMeta = getGroupForCamera(camera);
-        state.accordionStates[gMeta.id] = true;
-        const groupEl = document.querySelector(`.accordion-group[data-group-id="${gMeta.id}"]`);
-        if (groupEl && !groupEl.classList.contains('open')) {
-          groupEl.classList.add('open');
-        }
-        
-        // アコーディオンが展開されてDOMの高さが確定するのを少し待ってからスクロール位置を計算
-        setTimeout(() => {
-          const card = document.querySelector(`.camera-card[data-camera-id="${camera.id}"]`);
-          const listContainer = document.getElementById('camera-list'); // スクロール領域は#camera-list
-          if (card && listContainer) {
-            // 画面全体がスクロールしないよう、リスト内部のスクロール位置のみを計算して移動
-            const listRect = listContainer.getBoundingClientRect();
-            const cardRect = card.getBoundingClientRect();
-            
-            // cardが画面内に見えているかどうかの判定
-            const isVisible = (cardRect.top >= listRect.top) && (cardRect.bottom <= listRect.bottom);
-            
-            if (!isVisible) {
-              listContainer.scrollBy({
-                top: cardRect.top - listRect.top - 20, // 少し上に余裕を持たせる
-                behavior: 'smooth'
-              });
-            }
-            
-            // ハイライト効果
-            card.classList.add('card-highlight');
-            setTimeout(() => card.classList.remove('card-highlight'), 2000);
-          }
-        }, 150); // アコーディオンのCSSトランジションにある程度合わせる
-      };
 
       // 全マーカー共通のホバー・クリック・離脱・ホバー維持イベントをバインド
       setupTooltipHoverEvents(marker, camera);
@@ -1180,26 +1131,8 @@
       }).setContent(popupContent);
       marker.bindTooltip(waterTooltip);
 
-      // 水位観測所スマートツールチップ位置自動調整関数
-      const openSmartWaterTooltip = () => {
-        if (!state.map) return;
-        const config = calculateSmartDirectionAndOffset(marker);
-
-        const currentTooltip = marker.getTooltip();
-        if (currentTooltip) {
-          currentTooltip.options.direction = config.direction;
-          currentTooltip.options.offset = config.offset;
-        }
-        marker.openTooltip();
-      };
-
       // 全マーカー共通のホバー・クリック・離脱・ホバー維持イベントをバインド（水位観測所にも完全適用）
       setupTooltipHoverEvents(marker, null, true, station);
-
-      // ピン直接クリック時：添付画像の画面がそのままモーダル内に開く
-      marker.on('click', () => {
-        openWaterLevelModal(station);
-      });
 
       state.layers['water_level'].addLayer(marker);
     });
@@ -1469,6 +1402,14 @@
 
   // ■ マーカー共通のスマートホバー・クリック・自動消去遅延バインド関数
   function setupTooltipHoverEvents(marker, camera = null, isWater = false, station = null) {
+    const triggerAction = () => {
+      if (isWater && station) {
+        openWaterLevelModal(station);
+      } else if (camera) {
+        document.dispatchEvent(new CustomEvent('open-camera-modal', { detail: camera.id }));
+      }
+    };
+
     const smartOpenTooltip = () => {
       const currentTooltip = marker.getTooltip();
       if (!currentTooltip) return;
@@ -1486,17 +1427,7 @@
       }).openTooltip();
     };
 
-    marker.on('click', () => {
-      if (isWater && station) {
-        openWaterLevelModal(station);
-      } else if (camera) {
-        document.dispatchEvent(new CustomEvent('open-camera-modal', { detail: camera.id }));
-      }
-    });
-
-    marker.on('mouseover', () => {
-      smartOpenTooltip();
-
+    const syncSidebar = () => {
       if (camera) {
         const gMeta = getGroupForCamera(camera);
         state.accordionStates[gMeta.id] = true;
@@ -1522,14 +1453,39 @@
           }
         }, 150);
       }
+    };
+
+    // クリック・タップ時の挙動（スマホ：1回目でポップアップ展開、2回目で遷移 / PC：即遷移）
+    marker.on('click', () => {
+      const isAlreadyOpen = marker.isTooltipOpen && marker.isTooltipOpen();
+      if (isAlreadyOpen) {
+        // 既にポップアップが開いている状態でのタップ・クリック -> 遷移・モーダル表示を実行
+        triggerAction();
+      } else {
+        // ポップアップが閉じていた場合の初回タップ -> ポップアップを開いて位置名を確認可能にする
+        smartOpenTooltip();
+        syncSidebar();
+      }
     });
 
+    // マウスホバー時（PC）
+    marker.on('mouseover', () => {
+      smartOpenTooltip();
+      syncSidebar();
+    });
+
+    // ポップアップカード自体がタップ/クリックされた時も遷移を実行
     marker.on('tooltipopen', () => {
       const tooltip = marker.getTooltip();
       if (!tooltip) return;
       const tooltipEl = tooltip.getElement();
       if (tooltipEl) {
         L.DomEvent.disableClickPropagation(tooltipEl);
+        tooltipEl.style.cursor = 'pointer';
+        tooltipEl.onclick = (e) => {
+          e.stopPropagation();
+          triggerAction();
+        };
       }
     });
   }
