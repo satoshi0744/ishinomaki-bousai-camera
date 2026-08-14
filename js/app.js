@@ -100,6 +100,7 @@
     searchQuery: '',
     accordionStates: {},
     isMapCollapsed: false,
+    activeMarkerId: null, // 現在ポップアップが開いているマーカーの識別ID
     refreshTimer: null,
     countdownTimer: null,
     nextRefreshTime: null
@@ -211,6 +212,12 @@
 
     state.map.on('zoomend', updateZoomClass);
     updateZoomClass(); // 初期状態の判定
+
+    // 地図の何もない場所をクリック/タップした際はアクティブマーカーを解除
+    state.map.on('click', () => {
+      state.activeMarkerId = null;
+    });
+
     initWaterLevelMarkers(); // 水位観測所マーカーの配置
   }
 
@@ -506,7 +513,7 @@
               <i class="fa-solid fa-video"></i> ライブ動画配信中
             </div>
             <div style="font-size: 11px; color: #e2e8f0; line-height: 1.4; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 4px;">
-              <i class="fa-solid fa-video"></i> ピンをクリックして配信元サイトで映像を表示
+              <i class="fa-solid fa-video"></i> タップ／クリックで配信元サイトで映像を表示
             </div>
           </div>
         `;
@@ -516,7 +523,7 @@
           <div style="position: relative; margin-bottom: 6px;">
             <img src="${camera.imageUrl}" class="hover-popup-img" alt="${camera.name}" onerror="this.src='https://via.placeholder.com/210x115/1e293b/475569?text=Camera+Preview'">
             <div style="font-size: 11px; color: #38bdf8; margin-top: 5px; text-align: center; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 4px;">
-              <i class="fa-solid fa-camera"></i> ピンをクリックして詳細・拡大
+              <i class="fa-solid fa-camera"></i> タップ／クリックで詳細・拡大
             </div>
           </div>
         `;
@@ -1118,7 +1125,7 @@
           <div class="hover-popup-title" style="color: ${levelColor};">💧 ${station.name}</div>
           <div style="font-size: 11px; color: var(--text-secondary); margin: 4px 0;">${station.riverName}</div>
           <div style="margin: 4px 0;"><span class="weather-badge ${levelBadgeClass}">${levelText}</span></div>
-          <div class="hover-popup-hint" style="color: ${levelColor};"><i class="fa-solid fa-chart-line"></i> クリックで断面図・リアルタイム水位・予測を表示</div>
+          <div class="hover-popup-hint" style="color: ${levelColor};"><i class="fa-solid fa-chart-line"></i> タップ／クリックで断面図・リアルタイム水位・予測を表示</div>
         </div>
       `;
 
@@ -1402,11 +1409,13 @@
 
   // ■ マーカー共通のスマートホバー・クリック・自動消去遅延バインド関数
   function setupTooltipHoverEvents(marker, camera = null, isWater = false, station = null) {
+    const markerId = camera ? camera.id : (station ? 'water_' + (station.stationNo || station.name) : null);
+
     const triggerAction = () => {
       if (isWater && station) {
         openWaterLevelModal(station);
       } else if (camera) {
-        document.dispatchEvent(new CustomEvent('open-camera-modal', { detail: camera.id }));
+        openModal(camera.id);
       }
     };
 
@@ -1456,13 +1465,15 @@
     };
 
     // クリック・タップ時の挙動（スマホ：1回目でポップアップ展開、2回目で遷移 / PC：即遷移）
-    marker.on('click', () => {
-      const isAlreadyOpen = marker.isTooltipOpen && marker.isTooltipOpen();
-      if (isAlreadyOpen) {
-        // 既にポップアップが開いている状態でのタップ・クリック -> 遷移・モーダル表示を実行
+    marker.on('click', (e) => {
+      if (e && e.originalEvent) e.originalEvent.stopPropagation();
+
+      // すでにこのマーカーがアクティブ（ポップアップ表示中）だった場合 -> 2回目タップで遷移
+      if (state.activeMarkerId && state.activeMarkerId === markerId) {
         triggerAction();
       } else {
-        // ポップアップが閉じていた場合の初回タップ -> ポップアップを開いて位置名を確認可能にする
+        // 初回タップ時 -> アクティブ状態にセットし、ポップアップを開く
+        state.activeMarkerId = markerId;
         smartOpenTooltip();
         syncSidebar();
       }
@@ -1470,6 +1481,7 @@
 
     // マウスホバー時（PC）
     marker.on('mouseover', () => {
+      state.activeMarkerId = markerId; // PCホバー時もアクティブにしておくことで、直後のクリックで確実に遷移
       smartOpenTooltip();
       syncSidebar();
     });
@@ -1482,10 +1494,17 @@
       if (tooltipEl) {
         L.DomEvent.disableClickPropagation(tooltipEl);
         tooltipEl.style.cursor = 'pointer';
-        tooltipEl.onclick = (e) => {
-          e.stopPropagation();
+
+        const handleTooltipTap = (e) => {
+          if (e) {
+            e.stopPropagation();
+            if (e.preventDefault) e.preventDefault();
+          }
           triggerAction();
         };
+
+        tooltipEl.onclick = handleTooltipTap;
+        tooltipEl.ontouchend = handleTooltipTap;
       }
     });
   }
