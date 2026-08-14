@@ -1433,3 +1433,32 @@ body {
   0%, 100% { transform: translateX(-50%) translateY(0); }
   50% { transform: translateX(-50%) translateY(-3px); }
 }
+
+
+/* ==========================================================================
+   スマートツールチップ（Leaflet標準白背景を完全不透明ダークカードへ）
+   ========================================================================== */
+.leaflet-tooltip.custom-smart-tooltip {
+  background: #1e293b !important;
+  border: 1px solid #475569 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7) !important;
+  color: #ffffff !important;
+  padding: 8px 10px !important;
+  opacity: 1 !important;
+  font-family: inherit !important;
+}
+
+.leaflet-tooltip-top.custom-smart-tooltip::before { border-top-color: #1e293b !important; }
+.leaflet-tooltip-bottom.custom-smart-tooltip::before { border-bottom-color: #1e293b !important; }
+.leaflet-tooltip-left.custom-smart-tooltip::before { border-left-color: #1e293b !important; }
+.leaflet-tooltip-right.custom-smart-tooltip::before { border-right-color: #1e293b !important; }
+
+.hover-popup {
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+  min-width: 210px;
+  max-width: 240px;
+  background: transparent !important;
+}

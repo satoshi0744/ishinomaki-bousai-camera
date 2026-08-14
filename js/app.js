@@ -393,7 +393,7 @@
       let matchesOperator = state.activeOperatorFilter === 'all' || 
                            (state.activeOperatorFilter === 'mlit' && operator.includes('国土交通省')) || 
                            (state.activeOperatorFilter === 'miyagi' && operator.includes('宮城県'));
-      const matchesArea = state.activeAreaFilter === 'all' || area === state.activeAreaFilter || area === 'all';
+      const matchesArea = true; // 全カメラを常時表示保持し、エリア選択時はフォーカス＆アコーディオン展開のみ行う
       
       const layerGroup = state.layers[category];
       if (layerGroup) {
@@ -495,39 +495,47 @@
       });
       
       const categoryLabel = CONFIG.CATEGORY_LABELS[category] || 'その他';
-      let popupImgHtml = '';
       const isTypeB = camera.streamType === 'youtube' || camera.streamType === 'stream' || !camera.imageUrl;
-      
+      let popupImgHtml = '';
+
       if (isTypeB) {
+        // ① ビデオ（動画カメラ）UI
         popupImgHtml = `
-          <div style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 6px; padding: 8px; text-align: center; margin-bottom: 6px;">
-            <div style="font-size: 11px; color: #8b5cf6; font-weight: bold; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 4px;">
+          <div style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.4); border-radius: 6px; padding: 10px 8px; text-align: center; margin: 4px 0 6px 0;">
+            <div style="font-size: 12px; color: #c4b5fd; font-weight: bold; margin-bottom: 6px; display: flex; align-items: center; justify-content: center; gap: 5px;">
               <i class="fa-solid fa-video"></i> ライブ動画配信中
             </div>
-            <a href="${camera.sourceUrl}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 4px; background: linear-gradient(135deg, #7c3aed, #8b5cf6); color: white; text-align: center; padding: 6px 10px; border-radius: 4px; text-decoration: none; font-size: 11px; font-weight: bold; margin-top: 2px;">
-              <i class="fa-solid fa-play"></i> 映像を再生する
-            </a>
+            <div style="font-size: 11px; color: #e2e8f0; line-height: 1.4; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 4px;">
+              <i class="fa-solid fa-video"></i> ピンをクリックして配信元サイトで映像を表示
+            </div>
           </div>
         `;
       } else if (camera.imageUrl) {
-        popupImgHtml = `<img src="${camera.imageUrl}" class="hover-popup-img" alt="${camera.name}" style="cursor: pointer;" onclick="document.dispatchEvent(new CustomEvent('open-camera-modal', {detail: '${camera.id}'}))">`;
-      } else {
+        // ② 静止画カメラ UI
         popupImgHtml = `
-          <div class="hover-popup-noimg" style="margin-bottom: 5px; font-size: 11px;">静止画データなし</div>
-          <a href="${camera.sourceUrl}" target="_blank" rel="noopener noreferrer" style="display: block; background: var(--accent); color: white; text-align: center; padding: 6px; border-radius: 4px; text-decoration: none; font-size: 11px; margin-bottom: 5px;">
-            <i class="fa-solid fa-external-link"></i> 公式サイトを開く
-          </a>
+          <div style="position: relative; margin-bottom: 6px;">
+            <img src="${camera.imageUrl}" class="hover-popup-img" alt="${camera.name}" onerror="this.src='https://via.placeholder.com/210x115/1e293b/475569?text=Camera+Preview'">
+            <div style="font-size: 11px; color: #38bdf8; margin-top: 5px; text-align: center; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 4px;">
+              <i class="fa-solid fa-camera"></i> ピンをクリックして詳細・拡大
+            </div>
+          </div>
         `;
       }
 
       const popupContent = `
-        <div class="hover-popup" style="pointer-events: auto;">
-          <div class="hover-popup-title">${camera.name}</div>
-          <div style="font-size: 10px; color: var(--accent); margin-bottom: 4px;"><i class="fa-solid fa-camera"></i> 選択時点の最新画像を表示中</div>
+        <div class="hover-popup" style="pointer-events: none;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.15); padding-bottom: 5px;">
+            <div style="font-weight: 700; font-size: 13px; color: #ffffff; text-align: left; line-height: 1.3;">
+              ${camera.name}
+            </div>
+            <span class="category-badge badge-${category}" style="flex-shrink: 0; font-size: 10px; padding: 2px 6px;">
+              ${categoryLabel}
+            </span>
+          </div>
           ${popupImgHtml}
-          <button style="width: 100%; padding: 6px; background: #374151; color: white; border: none; border-radius: 4px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;" onclick="document.dispatchEvent(new CustomEvent('open-camera-modal', {detail: '${camera.id}'}))">
-            <i class="fa-solid fa-expand"></i> 詳細・大画面
-          </button>
+          <div style="font-size: 10px; color: #94a3b8; margin-top: 6px; display: flex; align-items: center; gap: 4px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 4px;">
+            <i class="fa-solid fa-user-shield"></i> ${camera.operator || '管理者情報'}
+          </div>
         </div>
       `;
       // 初期化時に1度だけTooltipをバインド（DOM要素を解体・破壊しない）
@@ -736,7 +744,7 @@
         matchesOperator = operator.includes('宮城県');
       }
       
-      const matchesArea = state.activeAreaFilter === 'all' || area === state.activeAreaFilter || area === 'all';
+      const matchesArea = true; // 全カメラを常時表示保持し、エリア選択時はフォーカス＆アコーディオン展開のみ行う
 
       const q = state.searchQuery.toLowerCase();
       const matchesSearch = q === '' ||
@@ -931,6 +939,13 @@
   function openModal(cameraId) {
     const camera = CAMERA_DATA.find(c => c.id === cameraId);
     if (!camera) return;
+
+    // ストリーム動画、または画像がないカメラの場合は、モーダルを開かず直接サイトに飛ぶ（2度手間の排除）
+    const isStream = camera.streamType === 'stream' || camera.streamType === 'youtube';
+    if ((isStream || !camera.imageUrl) && camera.sourceUrl) {
+      window.open(camera.sourceUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
 
     const overlay = document.getElementById('modal-overlay');
     if (!overlay) return;
@@ -1200,24 +1215,29 @@
     const AREA_CITIES = {
       'ishinomaki': [
         { code: '0420200', name: '石巻市' },
-        { code: '0421100', name: '東松島市' },
+        { code: '0421400', name: '東松島市' },
         { code: '0458100', name: '女川町' }
       ],
       'sendai': [
-        { code: '0410000', name: '仙台市' },
+        { code: '0410001', name: '仙台市東部' },
+        { code: '0410002', name: '仙台市西部' },
         { code: '0420300', name: '塩竈市' },
         { code: '0420700', name: '名取市' },
         { code: '0420900', name: '多賀城市' },
-        { code: '0421000', name: '岩沼市' },
+        { code: '0421100', name: '岩沼市' },
         { code: '0421600', name: '富谷市' }
       ],
       'osaki': [
-        { code: '0421500', name: '大崎市' },
+        { code: '0421501', name: '大崎市東部' },
+        { code: '0421502', name: '大崎市西部' },
         { code: '0444500', name: '加美町' },
-        { code: '0450500', name: '美里町' }
+        { code: '0450500', name: '美里町' },
+        { code: '0444400', name: '色麻町' },
+        { code: '0450100', name: '涌谷町' }
       ],
       'kurihara': [
-        { code: '0421300', name: '栗原市' }
+        { code: '0421301', name: '栗原市東部' },
+        { code: '0421302', name: '栗原市西部' }
       ],
       'tome': [
         { code: '0421200', name: '登米市' }
@@ -1229,13 +1249,20 @@
       'sennan': [
         { code: '0420600', name: '白石市' },
         { code: '0420800', name: '角田市' },
-        { code: '0432100', name: '大河原町' }
+        { code: '0432100', name: '大河原町' },
+        { code: '0430100', name: '蔵王町' },
+        { code: '0430200', name: '七ヶ宿町' },
+        { code: '0432200', name: '村田町' },
+        { code: '0432300', name: '柴田町' },
+        { code: '0432400', name: '川崎町' },
+        { code: '0434100', name: '丸森町' }
       ],
       'all': [
         { code: '0420200', name: '石巻市' },
-        { code: '0410000', name: '仙台市' },
-        { code: '0421500', name: '大崎市' },
-        { code: '0421300', name: '栗原市' },
+        { code: '0410001', name: '仙台市東部' },
+        { code: '0410002', name: '仙台市西部' },
+        { code: '0421501', name: '大崎市東部' },
+        { code: '0421301', name: '栗原市東部' },
         { code: '0421200', name: '登米市' },
         { code: '0420500', name: '気仙沼市' },
         { code: '0420600', name: '白石市' }
@@ -1282,11 +1309,12 @@
         }
       }
 
-      let html = '<div style="font-weight: bold; color: var(--accent); margin-right: 8px; display: flex; align-items: center; gap: 6px; flex-shrink: 0;"><i class="fa-solid fa-cloud-bolt"></i> 警報・注意報:</div>';
+      let html = `<div style="font-weight: bold; color: var(--accent); margin-right: 8px; display: flex; align-items: center; gap: 6px; flex-shrink: 0; cursor: pointer;" onclick="window.open('https://www.jma.go.jp/bosai/#area_type=offices&area_code=040000', '_blank', 'noopener,noreferrer')" title="宮城県全体の気象警報（気象庁）を開く"><i class="fa-solid fa-cloud-bolt"></i> 警報・注意報:</div>`;
 
       targetCities.forEach(city => {
         const alerts = cityAlerts[city.name] || [];
-        html += `<div class="weather-item">
+        const jmaCityUrl = `https://www.jma.go.jp/bosai/#area_type=class20s&area_code=${city.code}`;
+        html += `<div class="weather-item" onclick="window.open('${jmaCityUrl}', '_blank', 'noopener,noreferrer')" style="cursor: pointer;" title="${city.name}の気象警報（気象庁）を開く">
           <span class="weather-area-name">${city.name}</span>`;
         if (alerts.length === 0) {
           html += `<span class="weather-badge warning-none">なし</span>`;
@@ -1313,6 +1341,10 @@
 
   // ■ 水位観測所 大画面モーダル表示（特定局のリアルタイム水位経過表・断面図に直リンク）
   function openWaterLevelModal(station) {
+    if (station.systemUrl) {
+      window.open(station.systemUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
     const overlay = document.getElementById('modal-overlay');
     if (!overlay) return;
 
@@ -1437,42 +1469,35 @@
 
   // ■ マーカー共通のスマートホバー・クリック・自動消去遅延バインド関数
   function setupTooltipHoverEvents(marker, camera = null, isWater = false, station = null) {
-    let tooltipHoverTimeout = null;
+    const smartOpenTooltip = () => {
+      const currentTooltip = marker.getTooltip();
+      if (!currentTooltip) return;
 
-    // クリック・タップ時
+      const config = calculateSmartDirectionAndOffset(marker);
+      const content = currentTooltip.getContent();
+      const className = currentTooltip.options.className || 'custom-smart-tooltip';
+
+      marker.unbindTooltip();
+      marker.bindTooltip(content, {
+        direction: config.direction,
+        interactive: true,
+        className: className,
+        offset: config.offset
+      }).openTooltip();
+    };
+
     marker.on('click', () => {
-      if (isWater) {
+      if (isWater && station) {
         openWaterLevelModal(station);
       } else if (camera) {
-        const pt = state.map.latLngToContainerPoint(marker.getLatLng());
-        const config = calculateSmartDirectionAndOffset(marker);
-        const currentTooltip = marker.getTooltip();
-        if (currentTooltip) {
-          currentTooltip.options.direction = config.direction;
-          currentTooltip.options.offset = config.offset;
-        }
-        marker.openTooltip();
-        // syncSidebarScroll();
+        document.dispatchEvent(new CustomEvent('open-camera-modal', { detail: camera.id }));
       }
     });
 
-    // マウスホバー時
     marker.on('mouseover', () => {
-      if (tooltipHoverTimeout) {
-        clearTimeout(tooltipHoverTimeout);
-        tooltipHoverTimeout = null;
-      }
-      
-      const config = calculateSmartDirectionAndOffset(marker);
-      const currentTooltip = marker.getTooltip();
-      if (currentTooltip) {
-        currentTooltip.options.direction = config.direction;
-        currentTooltip.options.offset = config.offset;
-      }
-      marker.openTooltip();
+      smartOpenTooltip();
 
-      if (camera && typeof syncSidebarScroll === 'function') {
-        // サイドバー連動スクロール
+      if (camera) {
         const gMeta = getGroupForCamera(camera);
         state.accordionStates[gMeta.id] = true;
         const groupEl = document.querySelector(`.accordion-group[data-group-id="${gMeta.id}"]`);
@@ -1499,33 +1524,12 @@
       }
     });
 
-    // マウス離脱時（移動猶予タイマーを600msに設定）
-    marker.on('mouseout', () => {
-      tooltipHoverTimeout = setTimeout(() => {
-        marker.closeTooltip();
-      }, 600);
-    });
-
-    // ツールチップ要素（DOM）にマウスが乗っている間は消さず維持する処理
     marker.on('tooltipopen', () => {
       const tooltip = marker.getTooltip();
       if (!tooltip) return;
       const tooltipEl = tooltip.getElement();
       if (tooltipEl) {
-        tooltipEl.style.pointerEvents = 'auto'; // クリック・ホバーを確実に受け付ける
-
-        tooltipEl.addEventListener('mouseenter', () => {
-          if (tooltipHoverTimeout) {
-            clearTimeout(tooltipHoverTimeout);
-            tooltipHoverTimeout = null;
-          }
-        });
-
-        tooltipEl.addEventListener('mouseleave', () => {
-          tooltipHoverTimeout = setTimeout(() => {
-            marker.closeTooltip();
-          }, 600);
-        });
+        L.DomEvent.disableClickPropagation(tooltipEl);
       }
     });
   }
